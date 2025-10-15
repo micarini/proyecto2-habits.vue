@@ -1,0 +1,31 @@
+.landing {
+	min-height: 100vh;
+	display: grid;
+	place-items: center;
+	padding: 2rem;
+	text-align: center;
+}
+.headline {
+	font-size: clamp(1.8rem, 4vw + 1rem, 3rem);
+	font-weight: 700;
+	line-height: 1.2;
+	margin-bottom: 2rem;
+}
+.cta {
+	display: inline-block;
+	background: #42b883;
+	color: white;
+	padding: 0.75rem 1.25rem;
+	border-radius: 0.5rem;
+	text-decoration: none;
+	font-weight: 600;
+	transition: filter 0.2s ease;
+}
+.cta:hover { filter: brightness(0.95); }
+
+.home {
+  display: grid;
+  place-items: center;
+  min-height: 70vh;
+  text-align: center;
+}
