@@ -54,7 +54,7 @@
   <button class="add-habit-btn" @click="openAddHabit">+ New habit</button>
 
       <!-- Add Habit Modal -->
-      <div v-if="showAddHabit" class="modal-overlay" @click.self="showAddHabit = false">
+      <div v-if="showAddHabit" class="modal-overlay" @click.self="closeHabitModal">
         <div class="modal-content">
           <h2 class="modal-title">New Habit</h2>
           <form @submit.prevent="addHabit">
@@ -62,7 +62,7 @@
               <span class="emoji-preview" @click="showEmojiPicker = !showEmojiPicker">{{ newHabit.icon || '😀' }}</span>
               <transition name="fade">
                 <div v-if="showEmojiPicker" class="emoji-picker-modal">
-                  <Picker @select="onEmojiSelect" :theme="'dark'" :per-line="8" />
+                  <Picker @select="onEmojiSelect" :data="data" :theme="'dark'" :per-line="8" />
                 </div>
               </transition>
             </div>
@@ -70,7 +70,7 @@
             <input v-model="newHabit.duration" class="input" placeholder="Duration (e.g. 15 min)" />
             <div class="modal-actions">
               <button class="add-btn" type="submit">Add</button>
-              <button class="cancel-btn" type="button" @click="showAddHabit = false">Cancel</button>
+              <button class="cancel-btn" type="button" @click="closeHabitModal">Cancel</button>
             </div>
           </form>
         </div>
@@ -82,6 +82,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import data from '@emoji-mart/data'
 import { Picker } from 'emoji-mart'
 
 const router = useRouter()
@@ -127,7 +128,7 @@ onMounted(() => {
 const habits = ref([
   { id: 1, icon: '🚶', title: 'Go for a walk', duration: '25 min', count: '1', done: false },
   { id: 2, icon: '📖', title: 'Read fiction', duration: '15 min', count: '1', done: false },
-  { id: 3, icon: '🛏️', title: '...', duration: '1 time', count: '1', done: true },
+  { id: 3, icon: '🧋', title: 'Drink liquid', duration: '1 time', count: '1', done: true },
 ])
 
 
@@ -183,6 +184,12 @@ function deleteHabit(habit) {
 
 function toggleHabitDone(habit) {
   habit.done = !habit.done
+}
+
+function closeHabitModal() {
+  showAddHabit.value = false;
+  showEmojiPicker.value = false;
+  editingHabitId.value = null;
 }
 </script>
 
