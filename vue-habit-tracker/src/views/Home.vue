@@ -7,7 +7,15 @@
       </header>
 
       <!-- calendario -->
-      <div class="week-calendar">
+      <div class="week-calendar" ref="calendarRef"
+        @mousedown="onCalendarDragStart"
+        @touchstart="onCalendarDragStart"
+        @mousemove="onCalendarDragMove"
+        @touchmove="onCalendarDragMove"
+        @mouseup="onCalendarDragEnd"
+        @mouseleave="onCalendarDragEnd"
+        @touchend="onCalendarDragEnd"
+      >
         <div 
           v-for="day in weekDays" 
           :key="day.date"
@@ -53,7 +61,7 @@
 
   <button class="add-habit-btn" @click="openAddHabit">+ New habit</button>
 
-      <!-- Add Habit Modal -->
+      <!-- Habit Modal -->
       <div v-if="showAddHabit" class="modal-overlay" @click.self="closeHabitModal">
         <div class="modal-content">
           <h2 class="modal-title">New Habit</h2>
@@ -62,7 +70,7 @@
               <span class="emoji-preview" @click="showEmojiPicker = !showEmojiPicker">{{ newHabit.icon || '😀' }}</span>
               <transition name="fade">
                 <div v-if="showEmojiPicker" class="emoji-picker-modal">
-                  <Picker @select="onEmojiSelect" :data="data" :theme="'dark'" :per-line="8" />
+                    <EmojiPicker @emoji-selected="onEmojiSelect" />                
                 </div>
               </transition>
             </div>
@@ -82,12 +90,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import data from '@emoji-mart/data'
-import { Picker } from 'emoji-mart'
+import EmojiPicker from '../components/EmojiPicker.vue'
+import motivations from '../assets/motivations.json'
 
 const router = useRouter()
 const userName = ref('Friend')
-const motivationMessage = ref('Start your day with water. One glass will energize you')
+const motivationMessage = ref('')
 
 // Modal y picker
 const showAddHabit = ref(false)
@@ -95,24 +103,45 @@ const showEmojiPicker = ref(false)
 const newHabit = ref({ icon: '', title: '', duration: '', count: '1', done: false })
 const editingHabitId = ref(null)
 
-// Semana dinámica
+// Semana dinámica y scroll automático a hoy
 const weekDays = ref([])
+const calendarRef = ref(null)
+let isDragging = false
+let dragStartX = 0
+let scrollStartX = 0
+
+function onCalendarDragStart(e) {
+  isDragging = true
+  dragStartX = e.touches ? e.touches[0].clientX : e.clientX
+  scrollStartX = calendarRef.value.scrollLeft
+}
+
+function onCalendarDragMove(e) {
+  if (!isDragging) return
+  const x = e.touches ? e.touches[0].clientX : e.clientX
+  const dx = dragStartX - x
+  calendarRef.value.scrollLeft = scrollStartX + dx
+}
+
+function onCalendarDragEnd() {
+  isDragging = false
+}
 function updateWeekDays() {
-  const today = new Date()
-  const days = []
-  const labels = ['SU','MO','TU','WE','TH','FR','SA']
-  // Empieza la semana en domingo
-  for (let i = -today.getDay(); i < 7 - today.getDay(); i++) {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
+  const today = new Date();
+  const days = [];
+  const labels = ['SU','MO','TU','WE','TH','FR','SA'];
+  // Mostrar los últimos 14 días (incluyendo hoy)
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
     days.push({
       label: labels[d.getDay()],
       number: d.getDate(),
       date: d.toISOString().slice(0,10),
       isToday: d.toDateString() === today.toDateString()
-    })
+    });
   }
-  weekDays.value = days
+  weekDays.value = days;
 }
 
 onMounted(() => {
@@ -123,6 +152,12 @@ onMounted(() => {
     router.push('/onboarding')
   }
   updateWeekDays()
+  // Mostrar frase aleatoria
+  if (motivations && motivations.length) {
+    motivationMessage.value = motivations[Math.floor(Math.random() * motivations.length)]
+  } else {
+    motivationMessage.value = 'Start your day with water. One glass will energize you'
+  }
 })
 
 const habits = ref([
@@ -140,7 +175,7 @@ function openAddHabit() {
 }
 
 function onEmojiSelect(emoji) {
-  newHabit.value.icon = emoji.emoji || emoji.native || ''
+  newHabit.value.icon = emoji.native || emoji.emoji || ''
   showEmojiPicker.value = false
 }
 
