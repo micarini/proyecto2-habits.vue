@@ -1,38 +1,26 @@
 <template>
   <section class="home">
     <div class="home-container">
-      <!-- Greeting -->
-      <header class="home-header">
-        <h1 class="greeting">Hey, {{ userName }}!</h1>
-      </header>
 
-      <!-- calendario -->
-      <div class="week-calendar" ref="calendarRef"
-        @mousedown="onCalendarDragStart"
-        @touchstart="onCalendarDragStart"
-        @mousemove="onCalendarDragMove"
-        @touchmove="onCalendarDragMove"
-        @mouseup="onCalendarDragEnd"
-        @mouseleave="onCalendarDragEnd"
-        @touchend="onCalendarDragEnd"
-      >
-        <div 
-          v-for="day in weekDays" 
-          :key="day.date"
-          class="day-chip"
-          :class="{ 'is-today': day.isToday }"
-        >
-          <span class="day-label">{{ day.label }}</span>
-          <span class="day-number">{{ day.number }}</span>
+      <div class="home-date-title">
+        <h2 class="date-title">{{ todayString }}</h2>
+        <h3 class="day-title">{{ dayString }}</h3>
+      </div>
+
+      <div class="motivation-card motivation-full">
+        <div class="motivation-avatar-face">
+          <div class="avatar-bg">
+            <img v-if="userAvatar" :src="getAvatarSrc(userAvatar)" alt="Avatar" />
+          </div>
+        </div>
+        <div class="motivation-message-side">
+          <h2 class="motivation-title">{{ motivationMessage }}</h2>
         </div>
       </div>
 
-      <!-- mensaje de motivación /*a futuro van a haber varios y van a ir cambiando */-->
-      <div class="motivation-card">
-        <p class="motivation-text">{{ motivationMessage }}</p>
-      </div>
+      <h2 class="habits-title">Habits</h2>
 
-      <!-- lista de habitos -->
+      <!-- Habits List -->
       <div class="habits-list">
         <div 
           v-for="habit in habits" 
@@ -59,7 +47,7 @@
         </div>
       </div>
 
-  <button class="add-habit-btn" @click="openAddHabit">+ New habit</button>
+      <button class="add-habit-btn" @click="openAddHabit">+ New habit</button>
 
       <!-- Habit Modal -->
       <div v-if="showAddHabit" class="modal-overlay" @click.self="closeHabitModal">
@@ -83,7 +71,7 @@
           </form>
         </div>
       </div>
-    </div>
+  </div>
   </section>
 </template>
 
@@ -95,13 +83,21 @@ import motivations from '../assets/motivations.json'
 
 const router = useRouter()
 const userName = ref('Friend')
+const userAvatar = ref(null)
 const motivationMessage = ref('')
 
-// Modal y picker
-const showAddHabit = ref(false)
-const showEmojiPicker = ref(false)
-const newHabit = ref({ icon: '', title: '', duration: '', count: '1', done: false })
-const editingHabitId = ref(null)
+// Function to get avatar source
+function getAvatarSrc(avatarId) {
+  const avatarMap = {
+    '1': '/avatar01-cropped.svg',
+    '2': '/avatar2-cropped.svg',
+    '3': '/avatar3-cropped.svg',
+    '4': '/avatar4-cropped.svg',
+    '5': '/avatar5-cropped.svg',
+    '6': '/avatar6-cropped.svg'
+  };
+  return avatarMap[avatarId] || '/avatar01-cropped.svg';
+}
 
 // Semana dinámica y scroll automático a hoy
 const weekDays = ref([])
@@ -158,14 +154,36 @@ onMounted(() => {
   } else {
     motivationMessage.value = 'Start your day with water. One glass will energize you'
   }
+  
+  // Load recommended habits if first time
+  loadRecommendedHabits()
 })
 
-const habits = ref([
-  { id: 1, icon: '🚶', title: 'Go for a walk', duration: '25 min', count: '1', done: false },
-  { id: 2, icon: '📖', title: 'Read fiction', duration: '15 min', count: '1', done: false },
-  { id: 3, icon: '🧋', title: 'Drink liquid', duration: '1 time', count: '1', done: true },
-])
+const habits = ref([])
 
+function loadRecommendedHabits() {
+  // Check if habits are already saved
+  const savedHabits = localStorage.getItem('userHabits')
+  if (savedHabits) {
+    habits.value = JSON.parse(savedHabits)
+  } else {
+    // Load recommended habits based on goal
+    const recommendedHabits = localStorage.getItem('recommendedHabits')
+    if (recommendedHabits) {
+      const parsed = JSON.parse(recommendedHabits)
+      habits.value = parsed.map((h, idx) => ({
+        id: Date.now() + idx,
+        icon: h.icon,
+        title: h.title,
+        duration: h.duration,
+        count: '1',
+        done: false
+      }))
+      // Save to localStorage
+      localStorage.setItem('userHabits', JSON.stringify(habits.value))
+    }
+  }
+}
 
 function openAddHabit() {
   editingHabitId.value = null
@@ -198,6 +216,9 @@ function addHabit() {
       done: false
     })
   }
+  // Save to localStorage
+  localStorage.setItem('userHabits', JSON.stringify(habits.value))
+  
   newHabit.value = { icon: '', title: '', duration: '', count: '1', done: false }
   showAddHabit.value = false
   showEmojiPicker.value = false
@@ -214,11 +235,15 @@ function editHabit(habit) {
 function deleteHabit(habit) {
   if (confirm('Delete this habit?')) {
     habits.value = habits.value.filter(h => h.id !== habit.id)
+    // Save to localStorage
+    localStorage.setItem('userHabits', JSON.stringify(habits.value))
   }
 }
 
 function toggleHabitDone(habit) {
   habit.done = !habit.done
+  // Save to localStorage
+  localStorage.setItem('userHabits', JSON.stringify(habits.value))
 }
 
 function closeHabitModal() {
@@ -229,12 +254,54 @@ function closeHabitModal() {
 </script>
 
 <style scoped>
+.motivation-message-center {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  width: 100%;
+}
+
+.motivation-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: #222;
+  line-height: 1.4;
+}
+.habits-title {
+  margin-top: 2.5rem;
+}
+/* Home Layout */
+.home {
+  min-height: 100dvh;
+  background: #101010;
+  position: relative;
+  overflow-y: auto;
+  padding: clamp(1.5rem, 5vw, 3rem);
+}
+
+.home::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	background: radial-gradient(ellipse at top, rgba(124, 34, 197, 0.1) 0%, transparent 60%),
+	            radial-gradient(ellipse at bottom right, rgba(233, 30, 140, 0.08) 0%, transparent 50%);
+	pointer-events: none;
+	z-index: 0;
+}
+
+.home > * {
+	position: relative;
+	z-index: 1;
+}
+
 .habit-actions {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   margin-left: 0.5rem;
 }
+
 .icon-btn {
   background: none;
   border: none;
@@ -245,6 +312,7 @@ function closeHabitModal() {
   border-radius: 6px;
   transition: background 0.2s;
 }
+
 .icon-btn:hover {
   background: rgba(255,255,255,0.08);
   color: var(--magenta, #e91e8c);
@@ -368,6 +436,23 @@ function closeHabitModal() {
   margin-bottom: 1.5rem;
 }
 
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-avatar {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  padding: 0.5rem;
+}
+
 .greeting {
   font-size: clamp(1.75rem, 5vw, 2.25rem);
   font-weight: 700;
@@ -410,50 +495,75 @@ function closeHabitModal() {
 .day-number {
   font-size: 1.125rem;
   font-weight: 700;
-}
+} 
 
 /* Motivation Card */
 .motivation-card {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  border-radius: 24px;
+  padding: 1.5rem 1.25rem;
+  margin-bottom: 2rem;
+  color: #fff;
 }
 
-.motivation-text {
+.motivation-with-avatar {
+  min-height: 120px;
+}
+
+.motivation-avatar {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.12);
+  border-radius: 50%;
+  box-shadow: 0 2px 12px rgba(168,85,247,0.10);
+}
+.motivation-avatar img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+}
+.motivation-message {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.motivation-title {
+  font-size: 1.15rem;
+  font-weight: 600;
   margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  font-style: italic;
-  color: var(--text);
-  opacity: 0.9;
+  color: #fff;
+  line-height: 1.4;
 }
 
 /* Habits List */
 .habits-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
 .habit-card {
   display: flex;
   align-items: center;
   gap: 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #222222;
   border-radius: 18px;
-  padding: 1rem 1.25rem;
-  transition: all 0.2s ease;
+  padding: 1.15rem 1.25rem;
+  box-shadow: 0 2px 12px rgba(168,85,247,0.08);
+  transition: box-shadow 0.2s, transform 0.2s;
+  border: none;
 }
 
 .habit-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 24px rgba(168,85,247,0.15);
+  transform: translateY(-2px);
 }
 
 .habit-card.is-done {

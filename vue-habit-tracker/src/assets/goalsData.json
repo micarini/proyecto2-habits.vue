@@ -1,0 +1,57 @@
+[
+  {
+    "id": "health",
+    "title": "Better physical and mental health",
+    "icon": "🧠",
+    "habits": [
+      { "icon": "🚶", "title": "Go for a walk", "duration": "25 min" },
+      { "icon": "🧘", "title": "Meditate", "duration": "10 min" },
+      { "icon": "💧", "title": "Drink water", "duration": "8 glasses" },
+      { "icon": "😴", "title": "Sleep 8 hours", "duration": "8 hrs" }
+    ]
+  },
+  {
+    "id": "productivity",
+    "title": "Increase productivity",
+    "icon": "📈",
+    "habits": [
+      { "icon": "📝", "title": "Plan your day", "duration": "10 min" },
+      { "icon": "🎯", "title": "Focus work block", "duration": "50 min" },
+      { "icon": "📖", "title": "Read business book", "duration": "20 min" },
+      { "icon": "🧹", "title": "Organize workspace", "duration": "15 min" }
+    ]
+  },
+  {
+    "id": "self-knowledge",
+    "title": "Self-awareness",
+    "icon": "🪞",
+    "habits": [
+      { "icon": "📓", "title": "Journal", "duration": "15 min" },
+      { "icon": "🧘", "title": "Mindfulness practice", "duration": "10 min" },
+      { "icon": "📖", "title": "Read philosophy", "duration": "20 min" },
+      { "icon": "🤔", "title": "Self-reflection", "duration": "10 min" }
+    ]
+  },
+  {
+    "id": "lifestyle",
+    "title": "Better quality of life",
+    "icon": "✨",
+    "habits": [
+      { "icon": "🌅", "title": "Wake up early", "duration": "6:00 AM" },
+      { "icon": "🍎", "title": "Healthy meal", "duration": "3x day" },
+      { "icon": "🚶", "title": "Daily walk", "duration": "30 min" },
+      { "icon": "📵", "title": "Digital detox", "duration": "1 hr" }
+    ]
+  },
+  {
+    "id": "mindset",
+    "title": "More positive mindset",
+    "icon": "🌈",
+    "habits": [
+      { "icon": "🙏", "title": "Gratitude practice", "duration": "5 min" },
+      { "icon": "😊", "title": "Positive affirmations", "duration": "5 min" },
+      { "icon": "📓", "title": "Success journal", "duration": "10 min" },
+      { "icon": "🎵", "title": "Listen uplifting music", "duration": "20 min" }
+    ]
+  }
+]
