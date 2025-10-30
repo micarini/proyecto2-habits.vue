@@ -86,7 +86,7 @@ const userName = ref('Friend')
 const userAvatar = ref(null)
 const motivationMessage = ref('')
 
-// Function to get avatar source
+// get avatar source
 function getAvatarSrc(avatarId) {
   const avatarMap = {
     '1': '/avatar01-cropped.svg',

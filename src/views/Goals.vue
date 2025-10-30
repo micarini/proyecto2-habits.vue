@@ -31,8 +31,20 @@
         :disabled="!selectedGoal"
         @click="continueToHome"
       >
-        Continuar
+        Continue
       </button>
+      
+      <!-- Confirmation Modal -->
+      <div v-if="showConfirmModal" class="confirm-overlay">
+        <div class="confirm-modal">
+          <h3 class="confirm-title">Replace current habits?</h3>
+          <p class="confirm-body">Do you want to replace your current habits with the recommended ones for this goal? This will overwrite your current habits.</p>
+          <div class="confirm-actions">
+            <button class="btn btn-secondary" @click="cancelReplace">Keep existing</button>
+            <button class="btn btn-primary" @click="confirmReplace">Replace</button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>
@@ -57,20 +69,24 @@ const avatarMap = {
 }
 const userAvatarSrc = computed(() => avatarMap[userAvatar.value] || null)
 
+// in-app confirmation
+const showConfirmModal = ref(false)
+const pendingGoalData = ref(null)
+
 onMounted(() => {
-  // Check if user has completed onboarding
+  // onboarding check
   const savedName = localStorage.getItem('userName')
   if (!savedName) {
     router.push('/onboarding')
   }
   
-  // Check if goal was already selected
+  // get goal selected
   const savedGoal = localStorage.getItem('userGoal')
   if (savedGoal) {
     selectedGoal.value = savedGoal
   }
 
-  // Get user avatar
+  // get user avatar
   const savedAvatar = localStorage.getItem('userAvatar')
   if (savedAvatar) {
     userAvatar.value = savedAvatar
@@ -84,16 +100,43 @@ function selectGoal(goalId) {
 function continueToHome() {
   if (!selectedGoal.value) return
   
-  // Save selected goal
+  // guardo selected goal
   localStorage.setItem('userGoal', selectedGoal.value)
   
-  // Get recommended habits for this goal
+  // recommended habits for goal selected
   const goalData = goals.value.find(g => g.id === selectedGoal.value)
   if (goalData && goalData.habits) {
+    const existingUserHabits = localStorage.getItem('userHabits')
+    if (existingUserHabits) {
+      // in-app confirmation modal y guardo pending goal data
+      pendingGoalData.value = goalData
+      showConfirmModal.value = true
+      return
+    }
+    // si no hay habitos previos aplico recomendaciones inmediatamente sin preguntar
     localStorage.setItem('recommendedHabits', JSON.stringify(goalData.habits))
   }
   
-  // Navigate to home
+  // to home
+  router.push('/home')
+}
+
+function confirmReplace() {
+  if (!pendingGoalData.value) return
+  localStorage.removeItem('userHabits')
+  localStorage.setItem('recommendedHabits', JSON.stringify(pendingGoalData.value.habits))
+  showConfirmModal.value = false
+  pendingGoalData.value = null
+  router.push('/home')
+}
+
+function cancelReplace() {
+  if (pendingGoalData.value) {
+    // keep user's habits, but still save recommended for later
+    localStorage.setItem('recommendedHabits', JSON.stringify(pendingGoalData.value.habits))
+  }
+  showConfirmModal.value = false
+  pendingGoalData.value = null
   router.push('/home')
 }
 </script>
@@ -210,4 +253,41 @@ function continueToHome() {
 .continue-btn:active:not(:disabled) {
   transform: translateY(0);
 }
+
+/* Confirmation modal styles */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
+}
+.confirm-modal {
+  background: var(--background, #0f0f10);
+  padding: 1.25rem;
+  border-radius: 12px;
+  width: 92%;
+  max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  text-align: center;
+}
+.confirm-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+.confirm-body {
+  margin: 0 0 1rem;
+  color: var(--muted);
+}
+.confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+.btn { padding: 0.6rem 0.9rem; border-radius: 10px; border: none; cursor: pointer; font-weight: 600 }
+.btn-primary { background: linear-gradient(135deg, var(--purple), var(--magenta)); color: #fff }
+.btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: var(--muted) }
 </style>
