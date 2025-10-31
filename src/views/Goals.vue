@@ -38,7 +38,7 @@
       <div v-if="showConfirmModal" class="confirm-overlay">
         <div class="confirm-modal">
           <h3 class="confirm-title">Replace current habits?</h3>
-          <p class="confirm-body">Do you want to replace your current habits with the recommended ones for this goal? This will overwrite your current habits.</p>
+          <p class="confirm-body">This will overwrite your current habits.</p>
           <div class="confirm-actions">
             <button class="btn btn-secondary" @click="cancelReplace">Keep existing</button>
             <button class="btn btn-primary" @click="confirmReplace">Replace</button>

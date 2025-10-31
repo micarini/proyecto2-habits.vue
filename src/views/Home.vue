@@ -7,6 +7,28 @@
         <h3 class="day-title">{{ dayString }}</h3>
       </div>
 
+      <!-- Week calendar chips (scrollable) -->
+      <div
+        class="week-calendar"
+        ref="calendarRef"
+        @mousedown="onCalendarDragStart"
+        @mousemove="onCalendarDragMove"
+        @mouseup="onCalendarDragEnd"
+        @mouseleave="onCalendarDragEnd"
+        @touchstart.prevent="onCalendarDragStart"
+        @touchmove.prevent="onCalendarDragMove"
+        @touchend.prevent="onCalendarDragEnd"
+      >
+        <div
+          v-for="d in weekDays"
+          :key="d.date"
+          :class="['day-chip', { 'is-today': d.isToday }]"
+        >
+          <div class="day-label">{{ d.label }}</div>
+          <div class="day-number">{{ d.number }}</div>
+        </div>
+      </div>
+
       <div class="motivation-card motivation-full">
         <div class="motivation-avatar-face">
           <div class="avatar-bg">
@@ -26,57 +48,64 @@
           v-for="habit in habits" 
           :key="habit.id"
           class="habit-card"
-          :class="{ 'is-done': habit.done }"
+          :class="{ 'is-done': doneMap[habit.id] }"
+          @click="openHabitOptions(habit)"
         >
           <div class="habit-icon">
             <span>{{ habit.icon }}</span>
           </div>
           <div class="habit-info">
             <h3 class="habit-title">{{ habit.title }}</h3>
-            <p class="habit-status" v-if="habit.done">✓ Done</p>
-            <p class="habit-status" v-else>{{ habit.duration }}</p>
           </div>
-          <div class="habit-badge" @click="toggleHabitDone(habit)">
-            <span v-if="!habit.done" class="badge-time">{{ habit.count }}</span>
+          <div class="habit-badge" @click.stop="toggleHabitDone(habit)">
+            <span v-if="!doneMap[habit.id]" class="badge-empty"></span>
             <span v-else class="badge-check">✓</span>
           </div>
-          <div class="habit-actions">
-            <button class="icon-btn" title="Edit" @click.stop="editHabit(habit)">✏️</button>
-            <button class="icon-btn" title="Delete" @click.stop="deleteHabit(habit)">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Habit Options Modal (Inline Edit / Delete) -->
+      <div v-if="showHabitOptions" class="options-overlay" @click.self="closeHabitOptions">
+        <div class="options-modal">
+          <h3 class="options-title">{{ isCreating ? 'New Habit' : 'Edit Habit' }}</h3>
+
+          <div class="emoji-picker-row" style="justify-content:center;">
+            <span class="emoji-preview" @click.stop="showEmojiPicker = !showEmojiPicker">{{ editingCopy.icon || '😀' }}</span>
+            <transition name="fade">
+              <div v-if="showEmojiPicker" class="emoji-picker-modal">
+                  <EmojiPicker @emoji-selected="onEmojiSelect" />                
+              </div>
+            </transition>
+          </div>
+
+          <div class="modal-field">
+            <label class="modal-label">Title</label>
+            <input v-model="editingCopy.title" class="input" placeholder="Habit name" />
+          </div>
+
+
+          <div class="options-actions">
+            <button v-if="!isCreating" class="btn btn-danger outline-left" @click="showDeleteConfirm = true">Delete</button>
+            <button class="btn btn-secondary" :disabled="!editingCopy.title" @click="saveHabitEdits">Save</button>
+          </div>
+
+          <div v-if="showDeleteConfirm" class="delete-confirm">
+            <p>Are you sure you want to delete "{{ editingCopy.title }}"?</p>
+            <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;">
+              <button class="btn btn-danger" @click="confirmDelete">Yes, delete</button>
+            </div>
           </div>
         </div>
       </div>
 
       <button class="add-habit-btn" @click="openAddHabit">+ New habit</button>
 
-      <!-- Habit Modal -->
-      <div v-if="showAddHabit" class="modal-overlay" @click.self="closeHabitModal">
-        <div class="modal-content">
-          <h2 class="modal-title">New Habit</h2>
-          <form @submit.prevent="addHabit">
-            <div class="emoji-picker-row">
-              <span class="emoji-preview" @click="showEmojiPicker = !showEmojiPicker">{{ newHabit.icon || '😀' }}</span>
-              <transition name="fade">
-                <div v-if="showEmojiPicker" class="emoji-picker-modal">
-                    <EmojiPicker @emoji-selected="onEmojiSelect" />                
-                </div>
-              </transition>
-            </div>
-            <input v-model="newHabit.title" class="input" placeholder="Habit name" required />
-            <input v-model="newHabit.duration" class="input" placeholder="Duration (e.g. 15 min)" />
-            <div class="modal-actions">
-              <button class="add-btn" type="submit">Add</button>
-              <button class="cancel-btn" type="button" @click="closeHabitModal">Cancel</button>
-            </div>
-          </form>
-        </div>
-      </div>
   </div>
   </section>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import EmojiPicker from '../components/EmojiPicker.vue'
 import motivations from '../assets/motivations.json'
@@ -126,18 +155,37 @@ function updateWeekDays() {
   const today = new Date();
   const days = [];
   const labels = ['SU','MO','TU','WE','TH','FR','SA'];
-  // Mostrar los últimos 14 días (incluyendo hoy)
-  for (let i = 13; i >= 0; i--) {
+  // Build a range with days before and after today so user sees context around today
+  const before = 2
+  const after = 12
+  for (let i = -before; i <= after; i++) {
     const d = new Date(today);
-    d.setDate(today.getDate() - i);
+    d.setDate(today.getDate() + i);
     days.push({
       label: labels[d.getDay()],
       number: d.getDate(),
       date: d.toISOString().slice(0,10),
-      isToday: d.toDateString() === today.toDateString()
+      isToday: i === 0
     });
   }
   weekDays.value = days;
+}
+
+async function scrollTodayToStart() {
+  // wait for DOM
+  await nextTick()
+  const element = calendarRef.value 
+  if (!element) return
+  const chips = elelement.querySelectorAll('.day-chip')
+  for (const chip of chips) {
+    if (chip.classList.contains('is-today')) {
+      // scroll so the today chip has two previous chips visible
+      const chipWidth = chip.clientWidth || 56
+      const target = Math.max(0, chip.offsetLeft - (2 * chipWidth))
+      element.scrollTo({ left: target, behavior: 'smooth' })
+      break
+    }
+  }
 }
 
 onMounted(() => {
@@ -148,7 +196,7 @@ onMounted(() => {
     router.push('/onboarding')
   }
   updateWeekDays()
-  // Mostrar frase aleatoria
+  // frase aleatoria
   if (motivations && motivations.length) {
     motivationMessage.value = motivations[Math.floor(Math.random() * motivations.length)]
   } else {
@@ -157,9 +205,88 @@ onMounted(() => {
   
   // Load recommended habits if first time
   loadRecommendedHabits()
+  // after the calendar chips render, scroll so today's chip appears first
+  scrollTodayToStart()
 })
 
 const habits = ref([])
+const doneMap = ref({})
+
+// Habit options modal state
+const showHabitOptions = ref(false)
+const habitForOptions = ref(null)
+// are we creating a new habit in the options modal?
+const isCreating = ref(false)
+// emoji picker flag (used inside the unified modal)
+const showEmojiPicker = ref(false)
+
+function closeHabitOptions() {
+  habitForOptions.value = null
+  showHabitOptions.value = false
+  // reset create/edit flags so modal state is clean for next open
+  isCreating.value = false
+  showEmojiPicker.value = false
+  showDeleteConfirm.value = false
+  // clear editing copy to avoid stale data
+  editingCopy.value = { title: '', icon: '' }
+}
+
+// Editable copy for inline edits and delete confirmation
+const editingCopy = ref({ title: '', icon: '' })
+const showDeleteConfirm = ref(false)
+
+// When opening options, create a shallow copy we can edit/cancel
+function openHabitOptions(habit) {
+  habitForOptions.value = habit
+  editingCopy.value = { ...habit }
+  showDeleteConfirm.value = false
+  showHabitOptions.value = true
+}
+
+function openAddHabit() {
+  // open the same options modal but in create mode
+  isCreating.value = true
+  habitForOptions.value = null
+  editingCopy.value = { id: null, icon: '', title: '', count: '1' }
+  showDeleteConfirm.value = false
+  showEmojiPicker.value = false
+  showHabitOptions.value = true
+}
+
+function saveHabitEdits() {
+  // unified save handler: if creating, push new habit; else update existing
+  if (isCreating.value) {
+    const newH = {
+      id: Date.now(),
+      icon: editingCopy.value.icon || '😀',
+      title: editingCopy.value.title || 'New habit',
+      count: editingCopy.value.count || '1',
+    }
+    habits.value.push(newH)
+  } else {
+    if (!habitForOptions.value) return
+    const idx = habits.value.findIndex(h => h.id === habitForOptions.value.id)
+    if (idx === -1) return
+    // apply edits
+    habits.value[idx] = { ...habits.value[idx], ...editingCopy.value }
+  }
+  localStorage.setItem('userHabits', JSON.stringify(habits.value))
+  // close and reset modal state (closeHabitOptions resets isCreating)
+  closeHabitOptions()
+}
+
+function confirmDelete() {
+  if (!habitForOptions.value) return
+  habits.value = habits.value.filter(h => h.id !== habitForOptions.value.id)
+  localStorage.setItem('userHabits', JSON.stringify(habits.value))
+  closeHabitOptions()
+}
+
+function onEmojiSelect(emoji) {
+  // attach selected emoji to the editing copy used by unified modal
+  editingCopy.value.icon = emoji.native || emoji.emoji || ''
+  showEmojiPicker.value = false
+}
 
 function loadRecommendedHabits() {
   // Check if habits are already saved
@@ -174,10 +301,8 @@ function loadRecommendedHabits() {
       habits.value = parsed.map((h, idx) => ({
         id: Date.now() + idx,
         icon: h.icon,
-        title: h.title,
-        duration: h.duration,
-        count: '1',
-        done: false
+        title: h.duration ? `${h.title} for ${h.duration}` : h.title,
+        count: '1'
       }))
       // Save to localStorage
       localStorage.setItem('userHabits', JSON.stringify(habits.value))
@@ -185,71 +310,18 @@ function loadRecommendedHabits() {
   }
 }
 
-function openAddHabit() {
-  editingHabitId.value = null
-  Object.assign(newHabit.value, { icon: '', title: '', duration: '', count: '1', done: false })
-  showAddHabit.value = true
-  showEmojiPicker.value = false
-}
-
-function onEmojiSelect(emoji) {
-  newHabit.value.icon = emoji.native || emoji.emoji || ''
-  showEmojiPicker.value = false
-}
-
-function addHabit() {
-  if (!newHabit.value.title) return
-  if (editingHabitId.value) {
-    // Edit existing
-    const idx = habits.value.findIndex(h => h.id === editingHabitId.value)
-    if (idx !== -1) {
-      habits.value[idx] = { ...habits.value[idx], ...newHabit.value }
-    }
-  } else {
-    // Add new
-    habits.value.push({
-      id: Date.now(),
-      icon: newHabit.value.icon || '😀',
-      title: newHabit.value.title,
-      duration: newHabit.value.duration,
-      count: '1',
-      done: false
-    })
-  }
-  // Save to localStorage
-  localStorage.setItem('userHabits', JSON.stringify(habits.value))
-  
-  newHabit.value = { icon: '', title: '', duration: '', count: '1', done: false }
-  showAddHabit.value = false
-  showEmojiPicker.value = false
-  editingHabitId.value = null
-}
-
-function editHabit(habit) {
-  Object.assign(newHabit.value, habit)
-  editingHabitId.value = habit.id
-  showAddHabit.value = true
-  showEmojiPicker.value = false
-}
-
-function deleteHabit(habit) {
-  if (confirm('Delete this habit?')) {
-    habits.value = habits.value.filter(h => h.id !== habit.id)
-    // Save to localStorage
-    localStorage.setItem('userHabits', JSON.stringify(habits.value))
-  }
-}
-
 function toggleHabitDone(habit) {
-  habit.done = !habit.done
-  // Save to localStorage
-  localStorage.setItem('userHabits', JSON.stringify(habits.value))
+  // Toggle a lightweight in-memory map to control the opacity only.
+  // This intentionally does NOT modify the habit object or persist the state.
+  const id = habit.id
+  const current = !!doneMap.value[id]
+  // assign to trigger reactivity
+  doneMap.value = { ...doneMap.value, [id]: !current }
 }
 
 function closeHabitModal() {
-  showAddHabit.value = false;
+  // kept for compatibility if used elsewhere
   showEmojiPicker.value = false;
-  editingHabitId.value = null;
 }
 </script>
 
@@ -280,27 +352,18 @@ function closeHabitModal() {
   padding: clamp(1.5rem, 5vw, 3rem);
 }
 
-.home::before {
-	content: '';
-	position: fixed;
-	inset: 0;
-	background: radial-gradient(ellipse at top, rgba(124, 34, 197, 0.1) 0%, transparent 60%),
-	            radial-gradient(ellipse at bottom right, rgba(233, 30, 140, 0.08) 0%, transparent 50%);
-	pointer-events: none;
-	z-index: 0;
+.home-container {
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  display: block;
 }
 
-.home > * {
-	position: relative;
-	z-index: 1;
-}
-
-.habit-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-left: 0.5rem;
-}
+/* Ensure simple vertical spacing: header, calendar, motivation, habits */
+.home-date-title { margin-bottom: 0.25rem; }
+.week-calendar { margin-bottom: 1rem; }
+.motivation-card { margin-bottom: 1.25rem; }
+.habits-title { margin-top: 1rem; }
 
 .icon-btn {
   background: none;
@@ -426,10 +489,8 @@ function closeHabitModal() {
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
-.home-container {
-  max-width: 480px;
-  margin: 0 auto;
-  width: 100%;
+.home-header {
+  margin-bottom: 1.5rem;
 }
 
 .home-header {
@@ -597,17 +658,47 @@ function closeHabitModal() {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  min-width: 36px;
-  height: 36px;
+  min-width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
   font-weight: 600;
   font-size: 0.875rem;
+  border: 2px solid rgba(255,255,255,0.18);
 }
 
 .badge-check {
   color: #4ade80;
 }
+
+/* Options modal styles */
+.options-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 1200;
+}
+.options-modal {
+  background: var(--background, #18181b);
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  width: 92%;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.options-title { margin: 0 0 0.25rem; color: var(--text); font-size: 1.1rem }
+.options-body { margin: 0 0 1rem; color: var(--muted) }
+.options-actions { display:flex; gap:0.5rem; justify-content:center }
+.outline-left { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: var(--muted); padding:0.65rem 0.9rem; border-radius:12px }
+.btn-primary { background: linear-gradient(135deg, var(--purple), var(--magenta)); color: #fff; padding:0.65rem 0.9rem; border-radius:12px }
+.delete-confirm { margin-top: 0.75rem; color: var(--muted); }
+.modal-field { margin-bottom: 0.5rem; text-align: left }
+.modal-label { display:block; margin-bottom: 0.25rem; color: var(--muted); font-size:0.85rem }
+.btn-danger { background: linear-gradient(135deg,#ff5f6d,#ff7a5a); color: #fff; border:none; padding:0.5rem 0.75rem; border-radius:8px; font-weight:600 }
+.btn-secondary { background: transparent; border:1px solid rgba(255,255,255,0.08); color:var(--muted); padding:0.5rem 0.75rem; border-radius:8px }
 
 /* Add Habit Button */
 .add-habit-btn {
