@@ -22,7 +22,9 @@
         <div
           v-for="d in weekDays"
           :key="d.date"
-          :class="['day-chip', { 'is-today': d.isToday }]"
+          :data-date="d.date"
+          :class="['day-chip', { 'is-today': d.isToday, 'is-selected': d.date === selectedDate } ]"
+          @click="onWeekChipClick(d.date)"
         >
           <div class="day-label">{{ d.label }}</div>
           <div class="day-number">{{ d.number }}</div>
@@ -98,7 +100,15 @@
         </div>
       </div>
 
-      <button class="add-habit-btn" @click="openAddHabit">+ New habit</button>
+      <div class="add-habit-row">
+        <button class="add-habit-pill" @click="openAddHabit">+ New habit</button>
+        <div class="add-actions">
+          <button class="mini-action" title="Calendar view" @click="goToCalendar">📅</button>
+          <button class="mini-action" title="Statistics" @click="goToStats">📊</button>
+        </div>
+      </div>
+
+      <!-- Calendar view is now a separate page (navigates to /calendar) -->
 
   </div>
   </section>
@@ -174,9 +184,9 @@ function updateWeekDays() {
 async function scrollTodayToStart() {
   // wait for DOM
   await nextTick()
-  const element = calendarRef.value 
+  const element = calendarRef.value
   if (!element) return
-  const chips = elelement.querySelectorAll('.day-chip')
+  const chips = element.querySelectorAll('.day-chip')
   for (const chip of chips) {
     if (chip.classList.contains('is-today')) {
       // scroll so the today chip has two previous chips visible
@@ -205,12 +215,104 @@ onMounted(() => {
   
   // Load recommended habits if first time
   loadRecommendedHabits()
+  // load persisted completions
+  const savedCompletions = localStorage.getItem('habitCompletions')
+  if (savedCompletions) {
+    try { completions.value = JSON.parse(savedCompletions) } catch (e) { completions.value = {} }
+  }
+  // sync initial done map for today's selected date
+  syncDoneMapForSelected()
   // after the calendar chips render, scroll so today's chip appears first
   scrollTodayToStart()
 })
 
 const habits = ref([])
 const doneMap = ref({})
+// per-day completions persisted as { 'YYYY-MM-DD': [habitId, ...] }
+const completions = ref({})
+
+// Monthly calendar state
+const currentMonth = ref(new Date())
+const monthCells = ref([])
+const selectedDate = ref(new Date().toISOString().slice(0,10))
+const weekDayLabels = ['Su','Mo','Tu','We','Th','Fr','Sa']
+
+const monthTitle = computed(() => {
+  const d = new Date(currentMonth.value)
+  return d.toLocaleString(undefined, { month: 'long', year: 'numeric' })
+})
+
+function buildMonthCells(date) {
+  const firstOfMonth = new Date(date.getFullYear(), date.getMonth(), 1)
+  const startDay = firstOfMonth.getDay() // 0..6 (Sunday..Saturday)
+  // grid shows 6 weeks x 7 days
+  const cells = []
+  // start from the Sunday before/at the first day
+  const start = new Date(firstOfMonth)
+  start.setDate(firstOfMonth.getDate() - startDay)
+
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    const iso = d.toISOString().slice(0,10)
+    cells.push({
+      date: iso,
+      number: d.getDate(),
+      inMonth: d.getMonth() === date.getMonth(),
+      isToday: d.toDateString() === new Date().toDateString(),
+      isSelected: iso === selectedDate.value
+    })
+  }
+  monthCells.value = cells
+}
+
+function prevMonth() {
+  const d = new Date(currentMonth.value)
+  d.setMonth(d.getMonth() - 1)
+  currentMonth.value = d
+  buildMonthCells(d)
+}
+
+function nextMonth() {
+  const d = new Date(currentMonth.value)
+  d.setMonth(d.getMonth() + 1)
+  currentMonth.value = d
+  buildMonthCells(d)
+}
+
+function selectDate(dateISO) {
+  selectedDate.value = dateISO
+  // update selected flag in cells
+  monthCells.value = monthCells.value.map(c => ({ ...c, isSelected: c.date === dateISO }))
+  // also update weekDays focus if desired (not changing behavior now)
+}
+
+function onCalendarDateSelected(dateISO) {
+  // receive date from Calendar component (ISO string)
+  selectedDate.value = dateISO
+  // if you want, sync other UI elements here
+}
+
+function onWeekChipClick(dateISO) {
+  // ignore click if user was dragging the week strip
+  if (isDragging) {
+    // clear dragging flag and ignore this click
+    isDragging = false
+    return
+  }
+  // select the date locally
+  selectedDate.value = dateISO
+  // sync the transient done map from persisted completions for this date
+  syncDoneMapForSelected()
+}
+
+function syncDoneMapForSelected() {
+  const day = selectedDate.value || new Date().toISOString().slice(0,10)
+  const ids = Array.isArray(completions.value[day]) ? completions.value[day] : []
+  const map = {}
+  for (const id of ids) map[id] = true
+  doneMap.value = { ...doneMap.value, ...map }
+}
 
 // Habit options modal state
 const showHabitOptions = ref(false)
@@ -312,16 +414,39 @@ function loadRecommendedHabits() {
 
 function toggleHabitDone(habit) {
   // Toggle a lightweight in-memory map to control the opacity only.
-  // This intentionally does NOT modify the habit object or persist the state.
   const id = habit.id
   const current = !!doneMap.value[id]
-  // assign to trigger reactivity
+  // trigger reactivity
   doneMap.value = { ...doneMap.value, [id]: !current }
+
+  // Persist per-day completion state for the currently selected date
+  const day = selectedDate.value || new Date().toISOString().slice(0,10)
+  const dayList = Array.isArray(completions.value[day]) ? [...completions.value[day]] : []
+  if (!current) {
+    // marking as done -> add id if not present
+    if (!dayList.includes(id)) dayList.push(id)
+  } else {
+    // un-marking -> remove id
+    const idx = dayList.indexOf(id)
+    if (idx !== -1) dayList.splice(idx, 1)
+  }
+  // save back
+  completions.value = { ...completions.value, [day]: dayList }
+  try { localStorage.setItem('habitCompletions', JSON.stringify(completions.value)) } catch (e) { /* noop */ }
 }
 
 function closeHabitModal() {
   // kept for compatibility if used elsewhere
   showEmojiPicker.value = false;
+}
+
+function goToCalendar() {
+  // navigate to the calendar view
+  try { router.push('/calendar') } catch (e) { /* noop */ }
+}
+
+function goToStats() {
+  try { router.push('/stats') } catch (e) { /* noop */ }
 }
 </script>
 
@@ -542,6 +667,7 @@ function closeHabitModal() {
   border-radius: 16px;
   min-width: 52px;
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .day-chip.is-today {
@@ -551,6 +677,12 @@ function closeHabitModal() {
   font-weight: 600;
   text-transform: uppercase;
   opacity: 0.8;
+}
+
+.day-chip.is-selected {
+  box-shadow: 0 6px 18px rgba(167,139,250,0.12);
+  border: 2px solid rgba(233,30,140,0.18);
+  transform: translateY(-2px);
 }
 
 .day-number {
@@ -722,4 +854,63 @@ function closeHabitModal() {
 .add-habit-btn:active {
   transform: translateY(0);
 }
+
+.add-habit-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+.add-habit-pill {
+  flex: 1 1 auto;
+  padding: 0.9rem 1.1rem;
+  background: linear-gradient(135deg, var(--purple), var(--magenta));
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 28px;
+  box-shadow: 0 8px 24px rgba(124, 34, 197, 0.18);
+  cursor: pointer;
+}
+.add-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.mini-action {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 1.05rem;
+}
+.mini-action:hover { background: rgba(255,255,255,0.06); }
+
+/* Monthly calendar styles */
+.month-calendar {
+  background: rgba(255,255,255,0.02);
+  border-radius: 14px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+.month-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:0.5rem;
+  margin-bottom:0.5rem;
+}
+.month-title { font-weight:700; color:var(--text); }
+.month-nav { background:transparent; border:none; color:var(--muted); font-size:1.25rem; cursor:pointer }
+.month-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:0.25rem; margin-bottom:0.25rem }
+.wd { text-align:center; font-size:0.75rem; color:var(--muted) }
+.month-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:0.35rem }
+.day-cell { min-height:44px; display:flex; align-items:flex-start; justify-content:flex-end; padding:0.45rem; border-radius:8px; cursor:pointer }
+.day-cell.other-month { opacity:0.35 }
+.day-cell.today { box-shadow: inset 0 0 0 2px rgba(167,139,250,0.14); border-radius:8px }
+.day-cell.selected { background: linear-gradient(135deg,var(--purple),var(--magenta)); color:#fff }
+.day-num { font-weight:600 }
 </style>
