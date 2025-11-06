@@ -10,6 +10,7 @@
 
 <style scoped>
 .landing {
+	min-height: 100svh;
 	min-height: 100dvh;
 	display: flex;
 	flex-direction: column;
