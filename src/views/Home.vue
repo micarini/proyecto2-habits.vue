@@ -142,23 +142,33 @@ function getAvatarSrc(avatarId) {
 const weekDays = ref([])
 const calendarRef = ref(null)
 let isDragging = false
+let isPointerDown = false
 let dragStartX = 0
 let scrollStartX = 0
 
 function onCalendarDragStart(e) {
-  isDragging = true
+  // record pointer down, but don't mark as dragging until movement exceeds threshold
+  isPointerDown = true
+  isDragging = false
   dragStartX = e.touches ? e.touches[0].clientX : e.clientX
-  scrollStartX = calendarRef.value.scrollLeft
+  scrollStartX = calendarRef.value ? calendarRef.value.scrollLeft : 0
 }
 
 function onCalendarDragMove(e) {
-  if (!isDragging) return
+  if (!isPointerDown) return
   const x = e.touches ? e.touches[0].clientX : e.clientX
   const dx = dragStartX - x
-  calendarRef.value.scrollLeft = scrollStartX + dx
+  // only treat as a drag when movement is meaningfully large
+  if (!isDragging && Math.abs(dx) > 6) {
+    isDragging = true
+  }
+  if (isDragging && calendarRef.value) {
+    calendarRef.value.scrollLeft = scrollStartX + dx
+  }
 }
 
 function onCalendarDragEnd() {
+  isPointerDown = false
   isDragging = false
 }
 function updateWeekDays() {
@@ -166,8 +176,8 @@ function updateWeekDays() {
   const days = [];
   const labels = ['SU','MO','TU','WE','TH','FR','SA'];
   // Build a range with days before and after today so user sees context around today
-  const before = 2
-  const after = 12
+  const before = 15
+  const after = 15
   for (let i = -before; i <= after; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
@@ -184,18 +194,27 @@ function updateWeekDays() {
 async function scrollTodayToStart() {
   // wait for DOM
   await nextTick()
+  // center the selected date (today) in the scroll area if possible
+  scrollChipToCenter(selectedDate.value)
+}
+
+function scrollChipToCenter(dateISO) {
   const element = calendarRef.value
   if (!element) return
-  const chips = element.querySelectorAll('.day-chip')
-  for (const chip of chips) {
-    if (chip.classList.contains('is-today')) {
-      // scroll so the today chip has two previous chips visible
-      const chipWidth = chip.clientWidth || 56
-      const target = Math.max(0, chip.offsetLeft - (2 * chipWidth))
-      element.scrollTo({ left: target, behavior: 'smooth' })
-      break
-    }
-  }
+  const chip = element.querySelector(`.day-chip[data-date="${dateISO}"]`)
+  if (!chip) return
+  // Use bounding rects so calculations are robust across padding, transforms and scroll offsets.
+  const containerRect = element.getBoundingClientRect()
+  const chipRect = chip.getBoundingClientRect()
+  // center of chip relative to container left edge
+  const chipCenterRelative = (chipRect.left - containerRect.left) + (chipRect.width / 2)
+  // compute target scrollLeft so chip center aligns with container center
+  let target = chipCenterRelative + element.scrollLeft - (element.clientWidth / 2)
+  // clamp to scrollable bounds
+  const max = Math.max(0, element.scrollWidth - element.clientWidth)
+  if (target < 0) target = 0
+  if (target > max) target = max
+  element.scrollTo({ left: Math.round(target), behavior: 'smooth' })
 }
 
 onMounted(() => {
@@ -284,13 +303,15 @@ function selectDate(dateISO) {
   selectedDate.value = dateISO
   // update selected flag in cells
   monthCells.value = monthCells.value.map(c => ({ ...c, isSelected: c.date === dateISO }))
-  // also update weekDays focus if desired (not changing behavior now)
 }
 
 function onCalendarDateSelected(dateISO) {
   // receive date from Calendar component (ISO string)
   selectedDate.value = dateISO
-  // if you want, sync other UI elements here
+  // sync transient done map for the newly selected date
+  syncDoneMapForSelected()
+  // center the chip for that date in the week strip if visible
+  nextTick(() => scrollChipToCenter(dateISO))
 }
 
 function onWeekChipClick(dateISO) {
@@ -304,6 +325,8 @@ function onWeekChipClick(dateISO) {
   selectedDate.value = dateISO
   // sync the transient done map from persisted completions for this date
   syncDoneMapForSelected()
+  // center the selected chip
+  nextTick(() => scrollChipToCenter(dateISO))
 }
 
 function syncDoneMapForSelected() {
@@ -311,7 +334,7 @@ function syncDoneMapForSelected() {
   const ids = Array.isArray(completions.value[day]) ? completions.value[day] : []
   const map = {}
   for (const id of ids) map[id] = true
-  doneMap.value = { ...doneMap.value, ...map }
+  doneMap.value = map
 }
 
 // Habit options modal state
@@ -337,7 +360,7 @@ function closeHabitOptions() {
 const editingCopy = ref({ title: '', icon: '' })
 const showDeleteConfirm = ref(false)
 
-// When opening options, create a shallow copy we can edit/cancel
+// When opening options, create a copy to edit/cancel
 function openHabitOptions(habit) {
   habitForOptions.value = habit
   editingCopy.value = { ...habit }
@@ -356,7 +379,7 @@ function openAddHabit() {
 }
 
 function saveHabitEdits() {
-  // unified save handler: if creating, push new habit; else update existing
+  // save handler: if creating, push new habit; else update existing
   if (isCreating.value) {
     const newH = {
       id: Date.now(),
@@ -373,7 +396,7 @@ function saveHabitEdits() {
     habits.value[idx] = { ...habits.value[idx], ...editingCopy.value }
   }
   localStorage.setItem('userHabits', JSON.stringify(habits.value))
-  // close and reset modal state (closeHabitOptions resets isCreating)
+  // close and reset modal state (closeHabitOptions resetea isCreating)
   closeHabitOptions()
 }
 
@@ -440,13 +463,21 @@ function closeHabitModal() {
   showEmojiPicker.value = false;
 }
 
-function goToCalendar() {
-  // navigate to the calendar view
-  try { router.push('/calendar') } catch (e) { /* noop */ }
+async function goToCalendar() {
+  // navigate to the calendar view using async/await and log failures
+  try {
+    await router.push('/calendar')
+  } catch (err) {
+    console.warn('Navigation to /calendar failed', err)
+  }
 }
 
-function goToStats() {
-  try { router.push('/stats') } catch (e) { /* noop */ }
+async function goToStats() {
+  try {
+    await router.push('/stats')
+  } catch (err) {
+    console.warn('Navigation to /stats failed', err)
+  }
 }
 </script>
 
@@ -671,17 +702,19 @@ function goToStats() {
 }
 
 .day-chip.is-today {
-  background: linear-gradient(135deg, var(--purple), var(--magenta));
-  border-color: transparent;
+  box-shadow: 0 0 0 2px rgba(167,139,250,0.12); 
+  border: 1px solid rgba(167,139,250,0.18);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  opacity: 0.8;
+  opacity: 0.95;
 }
 
 .day-chip.is-selected {
-  box-shadow: 0 6px 18px rgba(167,139,250,0.12);
-  border: 2px solid rgba(233,30,140,0.18);
+  background: linear-gradient(135deg, var(--purple), var(--magenta));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 700;
   transform: translateY(-2px);
 }
 
