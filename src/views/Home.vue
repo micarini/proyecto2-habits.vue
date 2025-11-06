@@ -7,7 +7,6 @@
         <h3 class="day-title">{{ dayString }}</h3>
       </div>
 
-      <!-- Week calendar chips (scrollable) -->
       <div
         class="week-calendar"
         ref="calendarRef"
@@ -66,7 +65,6 @@
         </div>
       </div>
 
-      <!-- Habit Options Modal (Inline Edit / Delete) -->
       <div v-if="showHabitOptions" class="options-overlay" @click.self="closeHabitOptions">
         <div class="options-modal">
           <h3 class="options-title">{{ isCreating ? 'New Habit' : 'Edit Habit' }}</h3>
@@ -99,21 +97,15 @@
           </div>
         </div>
       </div>
-
-      <div class="add-habit-row">
-        <button class="add-habit-pill" @click="openAddHabit">+ New habit</button>
-        <div class="add-actions">
-          <button class="mini-action" title="Calendar view" @click="goToCalendar">📅</button>
-          <button class="mini-action" title="Mood Tracker" @click="goToMoodTracker">😎</button>
-        </div>
-      </div>
-
   </div>
+
+  <!-- Floating action bar (stays fixed) -->
+  <!-- Floating action bar moved to global component (App.vue) -->
   </section>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import EmojiPicker from '../components/EmojiPicker.vue'
 import motivations from '../assets/motivations.json'
@@ -248,7 +240,17 @@ onMounted(() => {
   syncDoneMapForSelected()
   // after the calendar chips render, scroll so today's chip appears first
   scrollTodayToStart()
+  // listen for global floating bar add event so the modal opens when user taps the global +
+  window.addEventListener('floating-open-add', onFloatingOpenAdd)
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('floating-open-add', onFloatingOpenAdd)
+})
+
+function onFloatingOpenAdd() {
+  openAddHabit()
+}
 
 const habits = ref([])
 const doneMap = ref({})
@@ -520,28 +522,12 @@ async function goToMoodTracker() {
   display: block;
 }
 
-/* Ensure simple vertical spacing: header, calendar, motivation, habits */
 .home-date-title { margin-bottom: 0.25rem; }
 .week-calendar { margin-bottom: 1rem; }
 .motivation-card { margin-bottom: 1.25rem; }
 .habits-title { margin-top: 1rem; }
 
-.icon-btn {
-  background: none;
-  border: none;
-  color: var(--muted, #aaa);
-  font-size: 1.1rem;
-  cursor: pointer;
-  padding: 0.2em 0.4em;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
 
-.icon-btn:hover {
-  background: rgba(255,255,255,0.08);
-  color: var(--magenta, #e91e8c);
-}
-/* Modal Overlay */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -777,7 +763,7 @@ async function goToMoodTracker() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 4rem;
 }
 
 .habit-card {

@@ -26,7 +26,7 @@
       </div>
 
       <header class="mood-header">
-        <button class="icon-btn" @click="$router.back()">←</button>
+        <button class="icon-btn" @click="$router.back()" aria-label="Back"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
         <h1 class="mood-title">Mood</h1>
       </header>
 

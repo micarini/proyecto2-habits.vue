@@ -115,6 +115,15 @@ function continueToHome() {
     }
     // si no hay habitos previos aplico recomendaciones inmediatamente sin preguntar
     localStorage.setItem('recommendedHabits', JSON.stringify(goalData.habits))
+    try {
+      const mapped = goalData.habits.map((h, idx) => ({
+        id: Date.now() + idx,
+        icon: h.icon,
+        title: h.duration ? `${h.title} for ${h.duration}` : h.title,
+        count: '1'
+      }))
+      localStorage.setItem('userHabits', JSON.stringify(mapped))
+    } catch (e) { /* noop */ }
   }
   
   // to home
@@ -127,6 +136,15 @@ function confirmReplace() {
   localStorage.setItem('recommendedHabits', JSON.stringify(pendingGoalData.value.habits))
   showConfirmModal.value = false
   pendingGoalData.value = null
+  try {
+    const mapped = pendingGoalData.value.habits.map((h, idx) => ({
+      id: Date.now() + idx,
+      icon: h.icon,
+      title: h.duration ? `${h.title} for ${h.duration}` : h.title,
+      count: '1'
+    }))
+    localStorage.setItem('userHabits', JSON.stringify(mapped))
+  } catch (e) { /* noop */ }
   router.push('/home')
 }
 

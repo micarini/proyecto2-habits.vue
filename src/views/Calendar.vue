@@ -2,7 +2,7 @@
   <section class="home">
     <div class="home-container">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <button class="icon-btn" @click="goBack">← Back</button>
+        <button class="icon-btn" @click="goBack" aria-label="Back"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
         <h2 class="date-title">Calendar</h2>
         <div style="width:48px"></div>
       </div>
