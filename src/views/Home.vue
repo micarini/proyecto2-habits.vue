@@ -15,9 +15,9 @@
         @mousemove="onCalendarDragMove"
         @mouseup="onCalendarDragEnd"
         @mouseleave="onCalendarDragEnd"
-        @touchstart.prevent="onCalendarDragStart"
-        @touchmove.prevent="onCalendarDragMove"
-        @touchend.prevent="onCalendarDragEnd"
+        @touchstart="onCalendarDragStart"
+        @touchmove="onCalendarDragMove"
+        @touchend="onCalendarDragEnd"
       >
         <div
           v-for="d in weekDays"
