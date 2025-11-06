@@ -7,7 +7,7 @@
         <div style="width:48px"></div>
       </div>
 
-      <div style="margin-bottom:4rem;">
+      <div style="margin-bottom:1rem;">
         <Calendar
           :initialDate="initialDateFromQuery"
           :markedDates="markedDates"
@@ -18,7 +18,7 @@
       </div>
 
       <!-- selected date and per-day habits/mood -->
-      <div v-if="selected">
+      <div style="margin-bottom:4rem;" v-if="selected">
         <p style="color:var(--muted)">Selected: {{ selected }}</p>
 
         <div v-if="habitsForSelected().length">
