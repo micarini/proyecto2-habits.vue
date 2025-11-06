@@ -104,11 +104,9 @@
         <button class="add-habit-pill" @click="openAddHabit">+ New habit</button>
         <div class="add-actions">
           <button class="mini-action" title="Calendar view" @click="goToCalendar">📅</button>
-          <button class="mini-action" title="Statistics" @click="goToStats">📊</button>
+          <button class="mini-action" title="Mood Tracker" @click="goToMoodTracker">😎</button>
         </div>
       </div>
-
-      <!-- Calendar view is now a separate page (navigates to /calendar) -->
 
   </div>
   </section>
@@ -184,11 +182,18 @@ function updateWeekDays() {
     days.push({
       label: labels[d.getDay()],
       number: d.getDate(),
-      date: d.toISOString().slice(0,10),
+      date: formatLocalDate(d),
       isToday: i === 0
     });
   }
   weekDays.value = days;
+}
+
+function formatLocalDate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 async function scrollTodayToStart() {
@@ -253,7 +258,7 @@ const completions = ref({})
 // Monthly calendar state
 const currentMonth = ref(new Date())
 const monthCells = ref([])
-const selectedDate = ref(new Date().toISOString().slice(0,10))
+const selectedDate = ref(formatLocalDate(new Date()))
 const weekDayLabels = ['Su','Mo','Tu','We','Th','Fr','Sa']
 
 const monthTitle = computed(() => {
@@ -273,7 +278,7 @@ function buildMonthCells(date) {
   for (let i = 0; i < 42; i++) {
     const d = new Date(start)
     d.setDate(start.getDate() + i)
-    const iso = d.toISOString().slice(0,10)
+  const iso = formatLocalDate(d)
     cells.push({
       date: iso,
       number: d.getDate(),
@@ -330,7 +335,7 @@ function onWeekChipClick(dateISO) {
 }
 
 function syncDoneMapForSelected() {
-  const day = selectedDate.value || new Date().toISOString().slice(0,10)
+  const day = selectedDate.value || formatLocalDate(new Date())
   const ids = Array.isArray(completions.value[day]) ? completions.value[day] : []
   const map = {}
   for (const id of ids) map[id] = true
@@ -443,7 +448,7 @@ function toggleHabitDone(habit) {
   doneMap.value = { ...doneMap.value, [id]: !current }
 
   // Persist per-day completion state for the currently selected date
-  const day = selectedDate.value || new Date().toISOString().slice(0,10)
+  const day = selectedDate.value || formatLocalDate(new Date())
   const dayList = Array.isArray(completions.value[day]) ? [...completions.value[day]] : []
   if (!current) {
     // marking as done -> add id if not present
@@ -472,11 +477,11 @@ async function goToCalendar() {
   }
 }
 
-async function goToStats() {
+async function goToMoodTracker() {
   try {
-    await router.push('/stats')
+    await router.push('/mood')
   } catch (err) {
-    console.warn('Navigation to /stats failed', err)
+    console.warn('Navigation to /mood failed', err)
   }
 }
 </script>

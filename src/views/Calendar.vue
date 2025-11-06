@@ -8,19 +8,32 @@
       </div>
 
       <div style="margin-bottom:1rem;">
-        <Calendar :initialDate="initialDateFromQuery" :markedDates="markedDates" @select-date="onDateSelected" />
+        <Calendar
+          :initialDate="initialDateFromQuery"
+          :markedDates="markedDates"
+          :habitDates="Object.keys(completions.value || {})"
+          :moodDates="Object.keys(moodEntries.value || {})"
+          @select-date="onDateSelected"
+        />
       </div>
 
-      <!-- selected date and per-day habits -->
+      <!-- selected date and per-day habits/mood -->
       <div v-if="selected">
         <p style="color:var(--muted)">Selected: {{ selected }}</p>
+
         <div v-if="habitsForSelected().length">
           <h3 style="margin-top:0.5rem;color:var(--text)">Habits for this day</h3>
           <ul>
             <li v-for="h in habitsForSelected()" :key="h.id" style="color:var(--muted);margin-bottom:0.25rem">{{ h.icon }} {{ h.title }}</li>
           </ul>
         </div>
-        <div v-else style="color:var(--muted);margin-top:0.5rem">No recorded completions for this day.</div>
+
+        <div v-if="moodForSelected()" style="margin-top:0.75rem">
+          <h3 style="margin:0;color:var(--text)">Mood</h3>
+          <p style="color:var(--muted);margin-top:0.25rem">{{ moodForSelected().emoji }}  {{ moodForSelected().name }}</p>
+        </div>
+
+        <div v-if="!habitsForSelected().length && !moodForSelected()" style="color:var(--muted);margin-top:0.5rem">No recorded completions or mood for this day.</div>
       </div>
     </div>
   </section>
@@ -47,7 +60,30 @@ const route = useRoute()
     try { completions.value = JSON.parse(savedCompletions) } catch (e) { completions.value = {} }
   }
 
-  const markedDates = computed(() => Object.keys(completions.value || {}))
+  // load mood entries so days with moods also get a mark on the calendar
+  const moodEntries = ref({})
+  const savedMoods = localStorage.getItem('moodEntries')
+  if (savedMoods) {
+    try { moodEntries.value = JSON.parse(savedMoods) } catch (e) { moodEntries.value = {} }
+  }
+
+  // markedDates is the union of days with habit completions and days with mood entries
+  const markedDates = computed(() => {
+    const dates = new Set()
+    Object.keys(completions.value || {}).forEach(d => dates.add(d))
+    Object.keys(moodEntries.value || {}).forEach(d => dates.add(d))
+    return Array.from(dates)
+  })
+
+  // small local mood map to translate moodId -> display (keeps UI consistent with MoodTracker)
+  const moods = [
+    { id: 1, name: 'Happy', emoji: '😊' },
+    { id: 2, name: 'Sad', emoji: '😢' },
+    { id: 3, name: 'Angry', emoji: '😠' },
+    { id: 4, name: 'Calm', emoji: '😌' },
+    { id: 5, name: 'Anxious', emoji: '😰' },
+    { id: 6, name: 'Motivated', emoji: '💪' }
+  ]
 
 function goBack() {
   router.back()
@@ -68,6 +104,14 @@ function habitsForSelected() {
   const dayKey = selected.value.slice(0,10)
   const ids = Array.isArray(completions.value[dayKey]) ? completions.value[dayKey] : []
   return ids.map(id => habits.value.find(h => h.id === id)).filter(Boolean)
+}
+
+function moodForSelected() {
+  if (!selected.value) return null
+  const dayKey = selected.value.slice(0,10)
+  const entry = (moodEntries.value || {})[dayKey]
+  if (!entry || !entry.moodId) return null
+  return moods.find(m => m.id === entry.moodId) || null
 }
 </script>
 
