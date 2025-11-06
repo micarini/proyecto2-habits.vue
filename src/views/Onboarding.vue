@@ -71,9 +71,10 @@ const handleSubmit = () => {
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   background: var(--gradient-bg);
   position: relative;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .onboarding-content {
@@ -81,6 +82,7 @@ const handleSubmit = () => {
   width: 100%;
   position: relative;
   z-index: 1;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .onboarding-title {
@@ -172,7 +174,7 @@ const handleSubmit = () => {
 
 .avatar-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 0.5rem;
 }
@@ -196,6 +198,7 @@ const handleSubmit = () => {
   height: 100%;
   object-fit: contain;
   transition: transform 0.2s ease;
+  max-width: 100%;
 }
 
 .avatar-option:hover {
@@ -228,7 +231,8 @@ const handleSubmit = () => {
   }
   
   .avatar-grid {
-    gap: 0.75rem;
+    gap: 0.6rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   
   .avatar-option {
