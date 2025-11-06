@@ -214,7 +214,7 @@ onMounted(() => {
 .mood-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem }
 .mood-title { flex:1; font-size:1.5rem; margin:0 }
 .mood-desc { color:var(--muted); margin-bottom:1rem }
-.mood-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:0.75rem; margin-bottom:1rem }
+.mood-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:0.75rem; margin-bottom:4rem }
 .mood-card { background: rgba(255,255,255,0.03); border-radius:14px; padding:1rem; display:flex; flex-direction:column; align-items:center; gap:0.5rem; cursor:pointer; border:1px solid rgba(255,255,255,0.04) }
 .mood-card .mood-art { font-size:2.4rem }
 .mood-card .mood-name { font-weight:600 }

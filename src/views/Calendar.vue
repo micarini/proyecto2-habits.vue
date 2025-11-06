@@ -7,7 +7,7 @@
         <div style="width:48px"></div>
       </div>
 
-      <div style="margin-bottom:1rem;">
+      <div style="margin-bottom:4rem;">
         <Calendar
           :initialDate="initialDateFromQuery"
           :markedDates="markedDates"
