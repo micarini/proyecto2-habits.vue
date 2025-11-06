@@ -9,20 +9,6 @@
 </script>
 
 <style scoped>
-.landing {
-	min-height: 100svh;
-	min-height: 100dvh;
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-end;
-	align-items: flex-start;
-	padding: clamp(1.5rem, 5vw, 3rem);
-	padding-left: clamp(1.5rem, 8vw, 5rem);
-	padding-bottom: clamp(8rem, 16vh, 12rem);
-	text-align: left;
-	background: url('/landing-bg.png') center/cover no-repeat;
-	position: relative;
-}
 
 .landing::before {
 	content: '';
@@ -37,21 +23,26 @@
 	z-index: 1;
 }
 
-.headline {
-	font-size: clamp(2.5rem, 7vw + 0.5rem, 5rem);
-	font-weight: 700;
-	line-height: 1.1;
-	letter-spacing: -0.03em;
-	margin: 0 0 2.5rem;
-	max-width: 18ch;
-	font-family: 'Bricolage Grotesque', sans-serif;
+.landing {
+	height: 100svh;
+	height: 100dvh; /* fallback */
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: flex-start;
+	padding: clamp(1.5rem, 5vw, 3rem);
+	padding-left: clamp(1.5rem, 8vw, 5rem);
+	/* smaller bottom padding using svh to avoid overflow */
+	padding-bottom: clamp(4rem, 10svh, 8rem);
+	text-align: left;
+	background: url('/landing-bg.png') center/cover no-repeat;
+	z-index: 0;
 }
 
 .cta {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.5rem;
 	background: rgba(255, 255, 255, 0.08);
 	backdrop-filter: blur(12px);
 	padding: 0.95rem 1.75rem;
