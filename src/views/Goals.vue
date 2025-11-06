@@ -288,7 +288,6 @@ function cancelReplace() {
   border-radius: 12px;
   width: 92%;
   max-width: 420px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
   text-align: center;
 }
 .confirm-title {

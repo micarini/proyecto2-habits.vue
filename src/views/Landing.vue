@@ -23,6 +23,16 @@
 	z-index: 1;
 }
 
+.headline {
+	font-size: clamp(3rem, 7vw + 0.5rem, 5rem);
+	font-weight: 700;
+	line-height: 1.1;
+	letter-spacing: -0.03em;
+	margin: 0 0 2.5rem;
+	max-width: 18ch;
+	font-family: 'Bricolage Grotesque', sans-serif;
+}
+
 .landing {
 	height: 100svh;
 	height: 100dvh; /* fallback */
