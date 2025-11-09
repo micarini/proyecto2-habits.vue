@@ -32,6 +32,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { formatLocalDate } from '../utils/date.js'
 
 const props = defineProps({
   initialDate: { type: String, default: null },
@@ -60,13 +61,6 @@ function isSameDay(a,b){ return a.getFullYear() === b.getFullYear() && a.getMont
 
 const monthLabel = computed(() => showDate.value.toLocaleString(undefined, { month: 'long', year: 'numeric' }))
 
-function formatLocalDate(d) {
-  const dt = (d instanceof Date) ? d : new Date(d)
-  const y = dt.getFullYear()
-  const m = String(dt.getMonth() + 1).padStart(2, '0')
-  const day = String(dt.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 // If the parent didn't provide separate arrays, attempt to load from localStorage
 // so existing saved data is visible even if the caller omitted props.

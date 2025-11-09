@@ -51,6 +51,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import avatars from '../assets/avatars.json'
 import { useRouter } from 'vue-router'
 import goalsData from '../assets/goalsData.json'
 
@@ -59,15 +60,7 @@ const goals = ref(goalsData)
 const selectedGoal = ref(null)
 
 const userAvatar = ref(null)
-const avatarMap = {
-  '1': '/avatar01-cropped.svg',
-  '2': '/avatar2-cropped.svg',
-  '3': '/avatar3-cropped.svg',
-  '4': '/avatar4-cropped.svg',
-  '5': '/avatar5-cropped.svg',
-  '6': '/avatar6-cropped.svg'
-}
-const userAvatarSrc = computed(() => avatarMap[userAvatar.value] || null)
+const userAvatarSrc = computed(() => (avatars && avatars[userAvatar.value]) || null)
 
 // in-app confirmation
 const showConfirmModal = ref(false)

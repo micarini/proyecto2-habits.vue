@@ -2,28 +2,7 @@
   <section class="mood-tracker">
     <div class="mood-container">
       <!-- Week calendar chips (scrollable) placed at the top -->
-      <div
-        class="week-calendar"
-        ref="calendarRef"
-        @mousedown="onCalendarDragStart"
-        @mousemove="onCalendarDragMove"
-        @mouseup="onCalendarDragEnd"
-        @mouseleave="onCalendarDragEnd"
-        @touchstart="onCalendarDragStart"
-        @touchmove="onCalendarDragMove"
-        @touchend="onCalendarDragEnd"
-      >
-        <div
-          v-for="d in weekDays"
-          :key="d.date"
-          :data-date="d.date"
-          :class="['day-chip', { 'is-today': d.isToday, 'is-selected': d.date === selectedDate } ]"
-          @click="onWeekChipClick(d.date)"
-        >
-          <div class="day-label">{{ d.label }}</div>
-          <div class="day-number">{{ d.number }}</div>
-        </div>
-      </div>
+      <WeekStrip v-model="selectedDate" @select="onWeekChipClick" />
 
       <header class="mood-header">
         <button class="icon-btn" @click="$router.back()" aria-label="Back"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
@@ -50,7 +29,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { formatLocalDate } from '../utils/date.js'
+import WeekStrip from '../components/WeekStrip.vue'
 
 const moods = [
   { id: 1, name: 'Happy', emoji: '😊' },
@@ -62,88 +43,12 @@ const moods = [
 ]
 
 const moodEntries = ref({})
-function formatLocalDate(d) {
-  const dt = (d instanceof Date) ? d : new Date(d)
-  const y = dt.getFullYear()
-  const m = String(dt.getMonth() + 1).padStart(2, '0')
-  const day = String(dt.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 const selectedDate = ref(formatLocalDate(new Date()))
 const showSaved = ref(false)
 
-// Week chips state (copied from Home.vue)
-const weekDays = ref([])
-const calendarRef = ref(null)
-let isDragging = false
-let isPointerDown = false
-let dragStartX = 0
-let scrollStartX = 0
-
-function onCalendarDragStart(e) {
-  isPointerDown = true
-  isDragging = false
-  dragStartX = e.touches ? e.touches[0].clientX : e.clientX
-  scrollStartX = calendarRef.value ? calendarRef.value.scrollLeft : 0
-}
-
-function onCalendarDragMove(e) {
-  if (!isPointerDown) return
-  const x = e.touches ? e.touches[0].clientX : e.clientX
-  const dx = dragStartX - x
-  if (!isDragging && Math.abs(dx) > 6) {
-    isDragging = true
-  }
-  if (isDragging && calendarRef.value) {
-    calendarRef.value.scrollLeft = scrollStartX + dx
-  }
-}
-
-function onCalendarDragEnd() {
-  isPointerDown = false
-  isDragging = false
-}
-
-function updateWeekDays() {
-  const today = new Date();
-  const days = [];
-  const labels = ['SU','MO','TU','WE','TH','FR','SA'];
-  const before = 15
-  const after = 15
-  for (let i = -before; i <= after; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    days.push({
-      label: labels[d.getDay()],
-      number: d.getDate(),
-      date: formatLocalDate(d),
-      isToday: i === 0
-    });
-  }
-  weekDays.value = days;
-}
-
-function scrollChipToCenter(dateISO) {
-  const element = calendarRef.value
-  if (!element) return
-  const chip = element.querySelector(`.day-chip[data-date="${dateISO}"]`)
-  if (!chip) return
-  const containerRect = element.getBoundingClientRect()
-  const chipRect = chip.getBoundingClientRect()
-  const chipCenterRelative = (chipRect.left - containerRect.left) + (chipRect.width / 2)
-  let target = chipCenterRelative + element.scrollLeft - (element.clientWidth / 2)
-  const max = Math.max(0, element.scrollWidth - element.clientWidth)
-  if (target < 0) target = 0
-  if (target > max) target = max
-  // delay slightly for stable layout on mobile
-  setTimeout(() => requestAnimationFrame(() => element.scrollTo({ left: Math.round(target), behavior: 'smooth' })), 50)
-}
-
 function onWeekChipClick(dateISO) {
-  if (isDragging) { isDragging = false; return }
+  // WeekStrip handles dragging/centering; just update selected date
   selectedDate.value = dateISO
-  // center the selected chip
-  nextTick(() => scrollChipToCenter(dateISO))
 }
 
 const displayDate = computed(() => {
@@ -203,8 +108,6 @@ function openHistory() {
 
 onMounted(() => {
   loadEntries()
-  updateWeekDays()
-  nextTick(() => scrollChipToCenter(selectedDate.value))
 })
 </script>
 

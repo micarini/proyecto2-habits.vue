@@ -7,28 +7,7 @@
         <h3 class="day-title">{{ dayString }}</h3>
       </div>
 
-      <div
-        class="week-calendar"
-        ref="calendarRef"
-        @mousedown="onCalendarDragStart"
-        @mousemove="onCalendarDragMove"
-        @mouseup="onCalendarDragEnd"
-        @mouseleave="onCalendarDragEnd"
-        @touchstart="onCalendarDragStart"
-        @touchmove="onCalendarDragMove"
-        @touchend="onCalendarDragEnd"
-      >
-        <div
-          v-for="d in weekDays"
-          :key="d.date"
-          :data-date="d.date"
-          :class="['day-chip', { 'is-today': d.isToday, 'is-selected': d.date === selectedDate } ]"
-          @click="onWeekChipClick(d.date)"
-        >
-          <div class="day-label">{{ d.label }}</div>
-          <div class="day-number">{{ d.number }}</div>
-        </div>
-      </div>
+      <WeekStrip v-model="selectedDate" @select="onWeekChipClick" />
 
       <div class="motivation-card motivation-full">
         <div class="motivation-avatar-face">
@@ -45,70 +24,39 @@
 
       <!-- Habits List -->
       <div class="habits-list">
-        <div 
-          v-for="habit in habits" 
+        <HabitCard
+          v-for="habit in habits"
           :key="habit.id"
-          class="habit-card"
-          :class="{ 'is-done': doneMap[habit.id] }"
-          @click="openHabitOptions(habit)"
-        >
-          <div class="habit-icon">
-            <span>{{ habit.icon }}</span>
-          </div>
-          <div class="habit-info">
-            <h3 class="habit-title">{{ habit.title }}</h3>
-          </div>
-          <div class="habit-badge" @click.stop="toggleHabitDone(habit)">
-            <span v-if="!doneMap[habit.id]" class="badge-empty"></span>
-            <span v-else class="badge-check">✓</span>
-          </div>
-        </div>
+          :habit="habit"
+          :done="!!doneMap[habit.id]"
+          @open="openHabitOptions"
+          @toggle="toggleHabitDone"
+        />
       </div>
 
-      <div v-if="showHabitOptions" class="options-overlay" @click.self="closeHabitOptions">
-        <div class="options-modal">
-          <h3 class="options-title">{{ isCreating ? 'New Habit' : 'Edit Habit' }}</h3>
-
-          <div class="emoji-picker-row" style="justify-content:center;">
-            <span class="emoji-preview" @click.stop="showEmojiPicker = !showEmojiPicker">{{ editingCopy.icon || '😀' }}</span>
-            <transition name="fade">
-              <div v-if="showEmojiPicker" class="emoji-picker-modal">
-                  <EmojiPicker @emoji-selected="onEmojiSelect" />                
-              </div>
-            </transition>
-          </div>
-
-          <div class="modal-field">
-            <label class="modal-label">Title</label>
-            <input v-model="editingCopy.title" class="input" placeholder="Habit name" />
-          </div>
-
-
-          <div class="options-actions">
-            <button v-if="!isCreating" class="btn btn-danger outline-left" @click="showDeleteConfirm = true">Delete</button>
-            <button class="btn btn-secondary" :disabled="!editingCopy.title" @click="saveHabitEdits">Save</button>
-          </div>
-
-          <div v-if="showDeleteConfirm" class="delete-confirm">
-            <p>Are you sure you want to delete "{{ editingCopy.title }}"?</p>
-            <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;">
-              <button class="btn btn-danger" @click="confirmDelete">Yes, delete</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Habit options modal (add / edit) -->
+      <HabitOptionsModal
+        :visible="showHabitOptions"
+        :initialHabit="habitForOptions"
+        :creating="isCreating"
+        @save="handleModalSave"
+        @delete="handleModalDelete"
+        @close="handleModalClose"
+      />
   </div>
 
-  <!-- Floating action bar (stays fixed) -->
-  <!-- Floating action bar moved to global component (App.vue) -->
   </section>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import EmojiPicker from '../components/EmojiPicker.vue'
 import motivations from '../assets/motivations.json'
+import avatars from '../assets/avatars.json'
+import WeekStrip from '../components/WeekStrip.vue'
+import HabitCard from '../components/HabitCard.vue'
+import { formatLocalDate } from '../utils/date.js'
+import HabitOptionsModal from '../components/HabitOptionsModal.vue'
 
 const router = useRouter()
 const userName = ref('Friend')
@@ -117,101 +65,8 @@ const motivationMessage = ref('')
 
 // get avatar source
 function getAvatarSrc(avatarId) {
-  const avatarMap = {
-    '1': '/avatar01-cropped.svg',
-    '2': '/avatar2-cropped.svg',
-    '3': '/avatar3-cropped.svg',
-    '4': '/avatar4-cropped.svg',
-    '5': '/avatar5-cropped.svg',
-    '6': '/avatar6-cropped.svg'
-  };
-  return avatarMap[avatarId] || '/avatar01-cropped.svg';
-}
-
-// Semana dinámica y scroll automático a hoy
-const weekDays = ref([])
-const calendarRef = ref(null)
-let isDragging = false
-let isPointerDown = false
-let dragStartX = 0
-let scrollStartX = 0
-
-function onCalendarDragStart(e) {
-  // record pointer down, but don't mark as dragging until movement exceeds threshold
-  isPointerDown = true
-  isDragging = false
-  dragStartX = e.touches ? e.touches[0].clientX : e.clientX
-  scrollStartX = calendarRef.value ? calendarRef.value.scrollLeft : 0
-}
-
-function onCalendarDragMove(e) {
-  if (!isPointerDown) return
-  const x = e.touches ? e.touches[0].clientX : e.clientX
-  const dx = dragStartX - x
-  // only treat as a drag when movement is meaningfully large
-  if (!isDragging && Math.abs(dx) > 6) {
-    isDragging = true
-  }
-  if (isDragging && calendarRef.value) {
-    calendarRef.value.scrollLeft = scrollStartX + dx
-  }
-}
-
-function onCalendarDragEnd() {
-  isPointerDown = false
-  isDragging = false
-}
-function updateWeekDays() {
-  const today = new Date();
-  const days = [];
-  const labels = ['SU','MO','TU','WE','TH','FR','SA'];
-  // Build a range with days before and after today so user sees context around today
-  const before = 15
-  const after = 15
-  for (let i = -before; i <= after; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    days.push({
-      label: labels[d.getDay()],
-      number: d.getDate(),
-      date: formatLocalDate(d),
-      isToday: i === 0
-    });
-  }
-  weekDays.value = days;
-}
-
-function formatLocalDate(d) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-async function scrollTodayToStart() {
-  // wait for DOM
-  await nextTick()
-  // center the selected date (today) in the scroll area if possible
-  scrollChipToCenter(selectedDate.value)
-}
-
-function scrollChipToCenter(dateISO) {
-  const element = calendarRef.value
-  if (!element) return
-  const chip = element.querySelector(`.day-chip[data-date="${dateISO}"]`)
-  if (!chip) return
-  // Use bounding rects so calculations are robust across padding, transforms and scroll offsets.
-  const containerRect = element.getBoundingClientRect()
-  const chipRect = chip.getBoundingClientRect()
-  // center of chip relative to container left edge
-  const chipCenterRelative = (chipRect.left - containerRect.left) + (chipRect.width / 2)
-  // compute target scrollLeft so chip center aligns with container center
-  let target = chipCenterRelative + element.scrollLeft - (element.clientWidth / 2)
-  // clamp to scrollable bounds
-  const max = Math.max(0, element.scrollWidth - element.clientWidth)
-  if (target < 0) target = 0
-  if (target > max) target = max
-  element.scrollTo({ left: Math.round(target), behavior: 'smooth' })
+  // avatars.json maps id -> path
+  return (avatars && avatars[avatarId]) ? avatars[avatarId] : avatars['1']
 }
 
 onMounted(() => {
@@ -221,7 +76,8 @@ onMounted(() => {
   } else {
     router.push('/onboarding')
   }
-  updateWeekDays()
+  // initialize week/month structures
+  buildMonthCells(currentMonth.value)
   // frase aleatoria
   if (motivations && motivations.length) {
     motivationMessage.value = motivations[Math.floor(Math.random() * motivations.length)]
@@ -238,8 +94,7 @@ onMounted(() => {
   }
   // sync initial done map for today's selected date
   syncDoneMapForSelected()
-  // after the calendar chips render, scroll so today's chip appears first
-  scrollTodayToStart()
+  // WeekStrip handles chip centering and scrolling
   // listen for global floating bar add event so the modal opens when user taps the global +
   window.addEventListener('floating-open-add', onFloatingOpenAdd)
 })
@@ -317,23 +172,12 @@ function onCalendarDateSelected(dateISO) {
   selectedDate.value = dateISO
   // sync transient done map for the newly selected date
   syncDoneMapForSelected()
-  // center the chip for that date in the week strip if visible
-  nextTick(() => scrollChipToCenter(dateISO))
 }
 
 function onWeekChipClick(dateISO) {
-  // ignore click if user was dragging the week strip
-  if (isDragging) {
-    // clear dragging flag and ignore this click
-    isDragging = false
-    return
-  }
-  // select the date locally
+  // select the date locally and sync completions; WeekStrip handles centering/dragging
   selectedDate.value = dateISO
-  // sync the transient done map from persisted completions for this date
   syncDoneMapForSelected()
-  // center the selected chip
-  nextTick(() => scrollChipToCenter(dateISO))
 }
 
 function syncDoneMapForSelected() {
@@ -349,75 +193,52 @@ const showHabitOptions = ref(false)
 const habitForOptions = ref(null)
 // are we creating a new habit in the options modal?
 const isCreating = ref(false)
-// emoji picker flag (used inside the unified modal)
-const showEmojiPicker = ref(false)
 
-function closeHabitOptions() {
-  habitForOptions.value = null
-  showHabitOptions.value = false
-  // reset create/edit flags so modal state is clean for next open
-  isCreating.value = false
-  showEmojiPicker.value = false
-  showDeleteConfirm.value = false
-  // clear editing copy to avoid stale data
-  editingCopy.value = { title: '', icon: '' }
-}
-
-// Editable copy for inline edits and delete confirmation
-const editingCopy = ref({ title: '', icon: '' })
-const showDeleteConfirm = ref(false)
-
-// When opening options, create a copy to edit/cancel
+// When opening options, set state for modal
 function openHabitOptions(habit) {
   habitForOptions.value = habit
-  editingCopy.value = { ...habit }
-  showDeleteConfirm.value = false
   showHabitOptions.value = true
+  isCreating.value = false
 }
 
 function openAddHabit() {
-  // open the same options modal but in create mode
   isCreating.value = true
   habitForOptions.value = null
-  editingCopy.value = { id: null, icon: '', title: '', count: '1' }
-  showDeleteConfirm.value = false
-  showEmojiPicker.value = false
   showHabitOptions.value = true
 }
 
-function saveHabitEdits() {
-  // save handler: if creating, push new habit; else update existing
+
+// Handlers for modal emits
+function handleModalSave(payload) {
   if (isCreating.value) {
     const newH = {
-      id: Date.now(),
-      icon: editingCopy.value.icon || '😀',
-      title: editingCopy.value.title || 'New habit',
-      count: editingCopy.value.count || '1',
+      id: payload.id || Date.now(),
+      icon: payload.icon || '😀',
+      title: payload.title || 'New habit',
+      count: payload.count || '1'
     }
     habits.value.push(newH)
   } else {
-    if (!habitForOptions.value) return
-    const idx = habits.value.findIndex(h => h.id === habitForOptions.value.id)
+    if (!payload || !payload.id) return
+    const idx = habits.value.findIndex(h => h.id === payload.id)
     if (idx === -1) return
-    // apply edits
-    habits.value[idx] = { ...habits.value[idx], ...editingCopy.value }
+    habits.value[idx] = { ...habits.value[idx], ...payload }
   }
   localStorage.setItem('userHabits', JSON.stringify(habits.value))
-  // close and reset modal state (closeHabitOptions resetea isCreating)
-  closeHabitOptions()
+  handleModalClose()
 }
 
-function confirmDelete() {
-  if (!habitForOptions.value) return
-  habits.value = habits.value.filter(h => h.id !== habitForOptions.value.id)
+function handleModalDelete(id) {
+  if (id == null) return
+  habits.value = habits.value.filter(h => h.id !== id)
   localStorage.setItem('userHabits', JSON.stringify(habits.value))
-  closeHabitOptions()
+  handleModalClose()
 }
 
-function onEmojiSelect(emoji) {
-  // attach selected emoji to the editing copy used by unified modal
-  editingCopy.value.icon = emoji.native || emoji.emoji || ''
-  showEmojiPicker.value = false
+function handleModalClose() {
+  habitForOptions.value = null
+  showHabitOptions.value = false
+  isCreating.value = false
 }
 
 function loadRecommendedHabits() {
@@ -764,66 +585,6 @@ async function goToMoodTracker() {
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 4rem;
-}
-
-.habit-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: #222222;
-  border-radius: 18px;
-  padding: 1.15rem 1.25rem;
-  box-shadow: 0 2px 12px rgba(168,85,247,0.08);
-  transition: box-shadow 0.2s, transform 0.2s;
-  border: none;
-}
-
-.habit-card:hover {
-  box-shadow: 0 4px 24px rgba(168,85,247,0.15);
-  transform: translateY(-2px);
-}
-
-.habit-card.is-done {
-  opacity: 0.6;
-}
-
-.habit-icon {
-  font-size: 1.75rem;
-  flex-shrink: 0;
-}
-
-.habit-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.habit-title {
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.habit-status {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.habit-badge {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  min-width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: 2px solid rgba(255,255,255,0.18);
-}
-
-.badge-check {
-  color: #4ade80;
 }
 
 /* Options modal styles */
