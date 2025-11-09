@@ -4,10 +4,7 @@
       <!-- Week calendar chips (scrollable) placed at the top -->
       <WeekStrip v-model="selectedDate" @select="onWeekChipClick" />
 
-      <header class="mood-header">
-        <button class="icon-btn" @click="$router.back()" aria-label="Back"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
-        <h1 class="mood-title">Mood</h1>
-      </header>
+      <PageHeader title="Mood" :showBack="true" @back="$router.back()" />
 
       <p class="mood-desc">How are you feeling today? Tap a mood to record it. You can edit later.</p>
 
@@ -32,6 +29,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { formatLocalDate } from '../utils/date.js'
 import WeekStrip from '../components/WeekStrip.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const moods = [
   { id: 1, name: 'Happy', emoji: '😊' },
@@ -114,23 +112,13 @@ onMounted(() => {
 <style scoped>
 .mood-tracker { min-height: 100dvh; background: #0f0f10; color: #fff; display:flex; align-items:flex-start; justify-content:center; padding:1.5rem; }
 .mood-container { width:100%; max-width:520px }
-.mood-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem }
-.mood-title { flex:1; font-size:1.5rem; margin:0 }
 .mood-desc { color:var(--muted); margin-bottom:1rem }
 .mood-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:0.75rem; margin-bottom:4rem }
 .mood-card { background: rgba(255,255,255,0.03); border-radius:14px; padding:1rem; display:flex; flex-direction:column; align-items:center; gap:0.5rem; cursor:pointer; border:1px solid rgba(255,255,255,0.04) }
 .mood-card .mood-art { font-size:2.4rem }
 .mood-card .mood-name { font-weight:600 }
 .mood-card.selected { background: linear-gradient(135deg,var(--purple),var(--magenta)); color:#fff; border-color:transparent; transform:translateY(-4px) }
-.btn { padding:0.6rem 0.9rem; border-radius:12px; border:none; cursor:pointer }
 .saved-toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(1.2rem + env(safe-area-inset-bottom,0px)); background:rgba(255,255,255,0.08); padding:0.5rem 0.75rem; border-radius:999px; font-weight:600 }
-
-/* Week Calendar (copied from Home) */
-.week-calendar { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.5rem; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; padding-inline: calc(50% - 26px); }
-.day-chip { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.75rem 0.85rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; min-width: 52px; transition: all 0.2s ease; cursor: pointer; scroll-snap-align: center; }
-.day-chip.is-today { box-shadow: 0 0 0 2px rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.18); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; opacity: 0.95; }
-.day-chip.is-selected { background: linear-gradient(135deg, var(--purple), var(--magenta)); border-color: transparent; color: #fff; font-weight: 700; transform: translateY(-2px); }
-.day-number { font-size: 1.125rem; font-weight: 700; }
 
 @media (max-width:640px) {
   .mood-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }

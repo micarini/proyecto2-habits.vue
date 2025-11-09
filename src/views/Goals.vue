@@ -297,7 +297,4 @@ function cancelReplace() {
   gap: 0.75rem;
   justify-content: center;
 }
-.btn { padding: 0.6rem 0.9rem; border-radius: 10px; border: none; cursor: pointer; font-weight: 600 }
-.btn-primary { background: linear-gradient(135deg, var(--purple), var(--magenta)); color: #fff }
-.btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: var(--muted) }
 </style>

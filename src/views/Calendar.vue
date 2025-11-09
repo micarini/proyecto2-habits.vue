@@ -1,11 +1,7 @@
 <template>
   <section class="home">
     <div class="home-container">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-        <button class="icon-btn" @click="goBack" aria-label="Back"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
-        <h2 class="date-title">Calendar</h2>
-        <div style="width:48px"></div>
-      </div>
+      <PageHeader title="Calendar" @back="goBack" />
 
       <div style="margin-bottom:1rem;">
         <Calendar
@@ -18,23 +14,13 @@
       </div>
 
       <!-- selected date and per-day habits/mood -->
-      <div style="margin-bottom:4rem;" v-if="selected">
-        <p style="color:var(--muted)">Selected: {{ selected }}</p>
-
-        <div v-if="habitsForSelected().length">
-          <h3 style="margin-top:0.5rem;color:var(--text)">Habits for this day</h3>
-          <ul>
-            <li v-for="h in habitsForSelected()" :key="h.id" style="color:var(--muted);margin-bottom:0.25rem">{{ h.icon }} {{ h.title }}</li>
-          </ul>
-        </div>
-
-        <div v-if="moodForSelected()" style="margin-top:0.75rem">
-          <h3 style="margin:0;color:var(--text)">Mood</h3>
-          <p style="color:var(--muted);margin-top:0.25rem">{{ moodForSelected().emoji }}  {{ moodForSelected().name }}</p>
-        </div>
-
-        <div v-if="!habitsForSelected().length && !moodForSelected()" style="color:var(--muted);margin-top:0.5rem">No recorded completions or mood for this day.</div>
-      </div>
+      <PerDayDetails
+        :selected="selected"
+        :habits="habits"
+        :completions="completions"
+        :moodEntries="moodEntries"
+        :moods="moods"
+      />
     </div>
   </section>
 </template>
@@ -43,6 +29,8 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Calendar from '../components/Calendar.vue'
+import PageHeader from '../components/PageHeader.vue'
+import PerDayDetails from '../components/PerDayDetails.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -116,7 +104,14 @@ function moodForSelected() {
 </script>
 
 <style scoped>
-.home { min-height: 100dvh; padding: clamp(1.5rem, 5vw, 3rem); background:#101010 }
-.home-container { max-width:480px; margin:0 auto }
-.date-title { color:var(--text); font-weight:700 }
+.home { 
+  min-height: 100dvh; 
+  padding: clamp(1.5rem, 5vw, 3rem); 
+  background:#101010 
+}
+
+.home-container { 
+  max-width:480px; 
+  margin:0 auto 
+}
 </style>

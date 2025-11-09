@@ -17,15 +17,18 @@
         <input v-model="editing.title" class="input" placeholder="Habit name" />
       </div>
 
-      <div class="options-actions">
-        <button v-if="!creating" class="btn btn-danger outline-left" @click="showDeleteConfirm = true">Delete</button>
+      <!-- Primary actions: show when not confirming delete -->
+      <div class="options-actions" v-if="!showDeleteConfirm">
+        <button v-if="!creating" class="btn btn-outline-danger" @click="showDeleteConfirm = true">Delete</button>
         <button class="btn btn-secondary" :disabled="!editing.title" @click="doSave">Save</button>
       </div>
 
+      <!-- Delete confirmation: replaces the primary actions while visible -->
       <div v-if="showDeleteConfirm" class="delete-confirm">
         <p>Are you sure you want to delete "{{ editing.title }}"?</p>
-        <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;">
-          <button class="btn btn-danger" @click="doDelete">Yes, delete</button>
+        <div style="display:flex;gap:0.75rem;justify-content:center;margin-top:0.75rem;">
+          <button class="btn btn-outline-danger" @click="doDelete">Yes, delete</button>
+          <button class="btn btn-secondary" @click="doSave">No, save</button>
         </div>
       </div>
     </div>
@@ -154,9 +157,4 @@ function onClose() {
 .options-actions { display:flex; gap:0.5rem; justify-content:center; margin-top:0.5rem }
 .delete-confirm { margin-top: 0.75rem; color: var(--muted); }
 
-/* reuse button classes from global styles if available; otherwise ensure basic styling */
-.btn { padding:0.6rem 0.9rem; border-radius:12px; border:none; cursor:pointer }
-.btn-danger { background: linear-gradient(135deg,#ff5f6d,#ff7a5a); color: #fff }
-.btn-secondary { background: transparent; border:1px solid rgba(255,255,255,0.08); color:var(--text, #fff); padding:0.6rem 0.9rem; border-radius:12px }
-.outline-left { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: var(--muted); padding:0.65rem 0.9rem; border-radius:12px }
 </style>
