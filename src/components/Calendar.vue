@@ -14,7 +14,7 @@
       <div
         v-for="cell in calendarGrid"
         :key="cell.key"
-        :class="['day-cell', { muted: cell.muted, today: cell.isToday, selected: cell.isSelected }]"
+        :class="['day-cell', { muted: cell.muted, today: cell.isToday, selected: cell.isSelected, 'selected-with-mood': cell.isSelected && cell.hasMood }]"
         @click="select(cell)">
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
           <div class="day-number">{{ cell.date.getDate() }}</div>
@@ -51,8 +51,20 @@ const emit = defineEmits(['select-date'])
 
 const weekdays = ['SU','MO','TU','WE','TH','FR','SA']
 
+import { watch } from 'vue'
+
 const showDate = ref(props.initialDate ? new Date(props.initialDate) : new Date())
 const selectedDate = ref(props.initialDate ? new Date(props.initialDate) : new Date())
+
+// react to parent changes to initialDate so parent-controlled selection updates calendar
+watch(() => props.initialDate, (val) => {
+  if (!val) return
+  try {
+    const d = new Date(val)
+    showDate.value = new Date(d.getFullYear(), d.getMonth(), 1)
+    selectedDate.value = new Date(val)
+  } catch (e) { /* ignore invalid dates */ }
+})
 
 function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1) }
 function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth() + 1, 0) }
@@ -198,6 +210,7 @@ function select(cell){ selectedDate.value = cell.date; emit('select-date', forma
 .day-cell.muted { opacity:0.35 }
 .day-cell.today { box-shadow: 0 0 0 2px rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.18); }
 .day-cell.selected { background: linear-gradient(90deg,#a78bfa,#e91e8c); color: #fff }
+.day-cell.selected-with-mood { background: linear-gradient(135deg,#7c3aed,#e11d74); color: #fff }
 .day-number { font-weight:600 }
 .day-dot { width:10px; height:10px; border-radius:50%; box-shadow: 0 2px 6px rgba(0,0,0,0.25); display:inline-block; background: #9ca3af }
 .day-dot.habit { background: #4ade80; /* green for habit */ }
@@ -207,3 +220,4 @@ function select(cell){ selectedDate.value = cell.date; emit('select-date', forma
 .mini-dot.habit { background: #4ade80 }
 .mini-dot.mood { background: #60a5fa }
 </style>
+ 

@@ -37,8 +37,10 @@ const selectedMood = computed(() => {
   if (!props.selected) return null
   const dayKey = props.selected.slice(0,10)
   const entry = (props.moodEntries || {})[dayKey]
-  if (!entry || !entry.moodId) return null
-  return props.moods.find(m => m.id === entry.moodId) || null
+  if (!entry) return null
+  const id = entry.moodId || entry.id || entry.moodId
+  if (!id) return null
+  return props.moods.find(m => m.id === id) || null
 })
 </script>
 

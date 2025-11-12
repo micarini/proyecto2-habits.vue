@@ -18,7 +18,7 @@
         :selected="selected"
         :habits="habits"
         :completions="completions"
-        :moodEntries="moodEntries"
+        :moodEntries="moodEntries.value"
         :moods="moods"
       />
     </div>
@@ -27,33 +27,25 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useMoods } from '../composables/useMoods.js'
 import { useRouter, useRoute } from 'vue-router'
 import Calendar from '../components/Calendar.vue'
 import PageHeader from '../components/PageHeader.vue'
 import PerDayDetails from '../components/PerDayDetails.vue'
+import { useHabits } from '../composables/useHabits.js'
+import { useCompletions } from '../composables/useCompletions.js'
 
 const router = useRouter()
 const route = useRoute()
   const selected = ref(null)
-  const completions = ref({})
-  const habits = ref([])
+  const { habits, loadHabits } = useHabits()
+  const { completions, loadCompletions } = useCompletions()
+  loadHabits()
+  loadCompletions()
 
-  // load user habits and completions from localStorage
-  const savedHabits = localStorage.getItem('userHabits')
-  if (savedHabits) {
-    try { habits.value = JSON.parse(savedHabits) } catch (e) { habits.value = [] }
-  }
-  const savedCompletions = localStorage.getItem('habitCompletions')
-  if (savedCompletions) {
-    try { completions.value = JSON.parse(savedCompletions) } catch (e) { completions.value = {} }
-  }
-
-  // load mood entries so days with moods also get a mark on the calendar
-  const moodEntries = ref({})
-  const savedMoods = localStorage.getItem('moodEntries')
-  if (savedMoods) {
-    try { moodEntries.value = JSON.parse(savedMoods) } catch (e) { moodEntries.value = {} }
-  }
+  // use shared moods composable for mood entries (keeps a single source of truth)
+  const { moodEntries, loadMoods, moods } = useMoods()
+  loadMoods()
 
   // markedDates is the union of days with habit completions and days with mood entries
   const markedDates = computed(() => {
@@ -63,15 +55,6 @@ const route = useRoute()
     return Array.from(dates)
   })
 
-  // small local mood map to translate moodId -> display (keeps UI consistent with MoodTracker)
-  const moods = [
-    { id: 1, name: 'Happy', emoji: '😊' },
-    { id: 2, name: 'Sad', emoji: '😢' },
-    { id: 3, name: 'Angry', emoji: '😠' },
-    { id: 4, name: 'Calm', emoji: '😌' },
-    { id: 5, name: 'Anxious', emoji: '😰' },
-    { id: 6, name: 'Motivated', emoji: '💪' }
-  ]
 
 function goBack() {
   router.back()

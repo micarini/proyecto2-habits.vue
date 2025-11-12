@@ -6,6 +6,7 @@ const Goals = () => import('../views/Goals.vue')
 const Home = () => import('../views/Home.vue')
 const CalendarView = () => import('../views/Calendar.vue')
 const MoodTracker = () => import('../views/MoodTracker.vue')
+const Dashboard = () => import('../views/Dashboard.vue')
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
@@ -14,6 +15,7 @@ const routes = [
   { path: '/home', name: 'Home', component: Home },
   { path: '/calendar', name: 'Calendar', component: CalendarView },
   { path: '/mood', name: 'MoodTracker', component: MoodTracker},
+  { path: '/dashboard', name: 'Dashboard', component: Dashboard },
 ]
 
 const router = createRouter({

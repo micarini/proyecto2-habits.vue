@@ -30,17 +30,9 @@ import { ref, computed, onMounted } from 'vue'
 import { formatLocalDate } from '../utils/date.js'
 import WeekStrip from '../components/WeekStrip.vue'
 import PageHeader from '../components/PageHeader.vue'
+import { useMoods } from '../composables/useMoods.js'
 
-const moods = [
-  { id: 1, name: 'Happy', emoji: '😊' },
-  { id: 2, name: 'Sad', emoji: '😢' },
-  { id: 3, name: 'Angry', emoji: '😠' },
-  { id: 4, name: 'Calm', emoji: '😌' },
-  { id: 5, name: 'Anxious', emoji: '😰' },
-  { id: 6, name: 'Motivated', emoji: '💪' }
-]
-
-const moodEntries = ref({})
+const { moodEntries, loadMoods, setMoodForDay, deleteMoodForDay, getMoodForDay, moods } = useMoods()
 const selectedDate = ref(formatLocalDate(new Date()))
 const showSaved = ref(false)
 
@@ -54,48 +46,29 @@ const displayDate = computed(() => {
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 })
 
-function loadEntries() {
-  const raw = localStorage.getItem('moodEntries')
-  if (raw) {
-    try { moodEntries.value = JSON.parse(raw) } catch (e) { moodEntries.value = {} }
-  }
-}
-
-function saveEntries() {
-  localStorage.setItem('moodEntries', JSON.stringify(moodEntries.value))
-}
-
 function isSelected(id) {
-  const v = moodEntries.value[selectedDate.value]
+  const v = getMoodForDay(selectedDate.value)
   return v && v.moodId === id
 }
 
 function selectMood(m) {
   const day = selectedDate.value
-  const existing = moodEntries.value[day]
+  const existing = getMoodForDay(day)
   // toggle: if same mood clicked again, remove it
   if (existing && existing.moodId === m.id) {
-    const copy = { ...moodEntries.value }
-    delete copy[day]
-    moodEntries.value = copy
-    saveEntries()
+    deleteMoodForDay(day)
     showSaved.value = true
     setTimeout(() => showSaved.value = false, 700)
     return
   }
   // otherwise set the mood for the day
-  moodEntries.value = { ...moodEntries.value, [day]: { moodId: m.id } }
-  saveEntries()
+  setMoodForDay(day, { moodId: m.id, emoji: m.emoji, name: m.name })
   showSaved.value = true
   setTimeout(() => showSaved.value = false, 700)
 }
 
 function clearMood() {
-  if (!moodEntries.value[selectedDate.value]) return
-  const copy = { ...moodEntries.value }
-  delete copy[selectedDate.value]
-  moodEntries.value = copy
-  saveEntries()
+  deleteMoodForDay(selectedDate.value)
 }
 
 function openHistory() {
@@ -105,7 +78,7 @@ function openHistory() {
 }
 
 onMounted(() => {
-  loadEntries()
+  loadMoods()
 })
 </script>
 

@@ -56,6 +56,8 @@ import WeekStrip from '../components/WeekStrip.vue'
 import HabitCard from '../components/HabitCard.vue'
 import { formatLocalDate } from '../utils/date.js'
 import HabitOptionsModal from '../components/HabitOptionsModal.vue'
+import { useHabits } from '../composables/useHabits.js'
+import { useCompletions } from '../composables/useCompletions.js'
 
 const router = useRouter()
 const userName = ref('Friend')
@@ -75,6 +77,17 @@ onMounted(() => {
   } else {
     router.push('/onboarding')
   }
+  // If the user is on a wide (desktop) screen, show the Dashboard view instead of the mobile Home
+  try {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      if (router.currentRoute && router.currentRoute.value && router.currentRoute.value.path !== '/dashboard') {
+        router.replace('/dashboard')
+        return
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
   // initialize week/month structures
   buildMonthCells(currentMonth.value)
   // frase aleatoria
@@ -86,11 +99,9 @@ onMounted(() => {
   
   // Load recommended habits if first time
   loadRecommendedHabits()
-  // load persisted completions
-  const savedCompletions = localStorage.getItem('habitCompletions')
-  if (savedCompletions) {
-    try { completions.value = JSON.parse(savedCompletions) } catch (e) { completions.value = {} }
-  }
+  // ensure composables load persisted data
+  loadHabits()
+  loadCompletions()
   // sync initial done map for today's selected date
   syncDoneMapForSelected()
   // listen for global floating bar add event so the modal opens when user taps the global +
@@ -105,9 +116,9 @@ function onFloatingOpenAdd() {
   openAddHabit()
 }
 
-const habits = ref([])
+const { habits, loadHabits, addHabit, updateHabit, deleteHabit } = useHabits()
+const { completions, loadCompletions, toggleCompletionForDay, setCompletionsForDay } = useCompletions()
 const doneMap = ref({})
-const completions = ref({})
 
 // Monthly calendar state
 const currentMonth = ref(new Date())
@@ -213,21 +224,17 @@ function handleModalSave(payload) {
       title: payload.title || 'New habit',
       count: payload.count || '1'
     }
-    habits.value.push(newH)
+    addHabit(newH)
   } else {
     if (!payload || !payload.id) return
-    const idx = habits.value.findIndex(h => h.id === payload.id)
-    if (idx === -1) return
-    habits.value[idx] = { ...habits.value[idx], ...payload }
+    updateHabit(payload)
   }
-  localStorage.setItem('userHabits', JSON.stringify(habits.value))
   handleModalClose()
 }
 
 function handleModalDelete(id) {
   if (id == null) return
-  habits.value = habits.value.filter(h => h.id !== id)
-  localStorage.setItem('userHabits', JSON.stringify(habits.value))
+  deleteHabit(id)
   handleModalClose()
 }
 
