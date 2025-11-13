@@ -127,7 +127,9 @@ watch(() => props.modelValue, (v) => {
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   overflow-x: auto;
-  padding-bottom: 0.5rem;
+  padding-bottom: 1.6rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.05) ;
 }
 
 .day-chip {

@@ -3,22 +3,13 @@
     <div class="home-container">
 
       <div class="home-date-title">
-        <h2 class="date-title">{{ todayString }}</h2>
+        <h2 class="greeting">{{ greeting }}</h2>
         <h3 class="day-title">{{ dayString }}</h3>
       </div>
 
       <WeekStrip v-model="selectedDate" @select="onWeekChipClick" />
 
-      <div class="motivation-card motivation-full">
-        <div class="motivation-avatar-face">
-          <div class="avatar-bg">
-            <img v-if="userAvatar" :src="getAvatarSrc(userAvatar)" alt="Avatar" />
-          </div>
-        </div>
-        <div class="motivation-message-side">
-          <h2 class="motivation-title">{{ motivationMessage }}</h2>
-        </div>
-      </div>
+      <MotivationCard :avatar-id="userAvatar || '1'" :message="motivationMessage" />
 
       <h2 class="habits-title">Habits</h2>
 
@@ -58,11 +49,17 @@ import { formatLocalDate } from '../utils/date.js'
 import HabitOptionsModal from '../components/HabitOptionsModal.vue'
 import { useHabits } from '../composables/useHabits.js'
 import { useCompletions } from '../composables/useCompletions.js'
+import { useGreeting } from '../composables/useGreeting.js'
+import MotivationCard from '../components/MotivationCard.vue'
 
 const router = useRouter()
-const userName = ref('Friend')
+const { userName, greeting } = useGreeting()
 const userAvatar = ref(null)
 const motivationMessage = ref('')
+const dayString = computed(() => {
+  const d = new Date()
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+})
 
 // get avatar source
 function getAvatarSrc(avatarId) {
@@ -71,10 +68,8 @@ function getAvatarSrc(avatarId) {
 }
 
 onMounted(() => {
-  const savedName = localStorage.getItem('userName')
-  if (savedName) {
-    userName.value = savedName
-  } else {
+  // onboarding redirect: if no saved name is present, route to onboarding
+  if (!userName.value || userName.value === 'Friend') {
     router.push('/onboarding')
   }
   // If the user is on a wide (desktop) screen, show the Dashboard view instead of the mobile Home
@@ -328,20 +323,7 @@ async function goToMoodTracker() {
   width: 100%;
 }
 
-.home-date-title { margin-bottom: 0.25rem; }
-
-.motivation-card {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  border-radius: 24px;
-  padding: 1.5rem 1.25rem;
-  margin-bottom: 2rem;
-  color: #fff;
-}
-
-.avatar-bg img { width: 70px; height: 70px; object-fit: contain; }
-.motivation-title { font-size: 1.15rem; font-weight: 600; margin: 0; color: #fff; line-height: 1.4; }
+.home-greeting { margin-bottom: 0.25rem; }
 
 .habits-title { margin-top: 1rem; }
 .habits-list { display:flex; flex-direction:column; gap:1rem; margin-bottom:4rem }

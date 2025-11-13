@@ -1,7 +1,13 @@
 <template>
   <section class="dashboard">
     <div class="left-pane">
-      <PageHeader title="Habits" :showBack="false" />
+      
+      <div class="dashboard-date-title">
+        <h2 class="greeting">{{ greeting }}</h2>
+      </div>
+
+      <MotivationCard avatar-id="1" :message="motivationMessage" />
+
       <WeekStrip v-model="selectedDate" @select="onWeekChipClick" />
 
       <div class="habits-list">
@@ -17,7 +23,7 @@
     </div>
 
     <div class="right-pane">
-      <PageHeader title="Calendar" :showBack="false" />
+      
       <Calendar
         :initialDate="selectedDate"
         :habitDates="Object.keys(completions.value || {})"
@@ -25,12 +31,7 @@
         @select-date="onDateSelected"
       />
 
-      <div class="mood-grid">
-        <div v-for="m in moods" :key="m.id" class="mood-card" :class="{ 'mood-selected': selectedMoodId === m.id }" @click="saveMoodForSelected(m)">
-          <div class="mood-art">{{ m.emoji }}</div>
-          <div class="mood-name">{{ m.name }}</div>
-        </div>
-      </div>
+      <MoodGrid :moods="moods" :selected-id="selectedMoodId" @select="saveMoodForSelected" />
     </div>
   </section>
 </template>
@@ -39,10 +40,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { formatLocalDate } from '../utils/date.js'
 import { useMoods } from '../composables/useMoods.js'
+import motivations from '../assets/motivations.json'
+import avatars from '../assets/avatars.json'
 import WeekStrip from '../components/WeekStrip.vue'
 import HabitCard from '../components/HabitCard.vue'
 import Calendar from '../components/Calendar.vue'
-import PageHeader from '../components/PageHeader.vue'
+import MotivationCard from '../components/MotivationCard.vue'
+import MoodGrid from '../components/MoodGrid.vue'
+import { useGreeting } from '../composables/useGreeting.js'
 import { useHabits } from '../composables/useHabits.js'
 import { useCompletions } from '../composables/useCompletions.js'
 
@@ -51,11 +56,22 @@ const { habits, loadHabits } = useHabits()
 const { completions, loadCompletions, toggleCompletionForDay } = useCompletions()
 const doneMap = ref({})
 const { moodEntries, loadMoods, setMoodForDay, deleteMoodForDay, getMoodForDay, moods } = useMoods()
+const motivationMessage = ref('')
+const { userName, greeting } = useGreeting()
+
+function getAvatarSrc(avatarId) {
+  return (avatars && avatars[avatarId]) ? avatars[avatarId] : avatars['1']
+}
 
 onMounted(() => {
   loadHabits()
   loadCompletions()
   loadMoods()
+  if (motivations && motivations.length) {
+    motivationMessage.value = motivations[Math.floor(Math.random() * motivations.length)]
+  } else {
+    motivationMessage.value = 'Success is the sum of small efforts repeated daily.'
+  }
   syncDoneMapForSelected()
 })
 
@@ -118,6 +134,7 @@ function toggleHabitDonePersist(habit) {
   max-width: 1440px;
   margin: 0 auto;
 }
+.dashboard { min-height: 100dvh; }
 .left-pane, .right-pane {
   display: flex;
   flex-direction: column;
@@ -126,17 +143,20 @@ function toggleHabitDonePersist(habit) {
 }
 .left-pane {
   flex: 1 1 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  gap: 1.5rem;
 }
 .right-pane {
   flex: 0 0 36%;
   max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  gap: 1.5rem;
 }
 .habits-list { display:flex; flex-direction:column; gap:1rem }
-.mood-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem }
-.mood-card { background: rgba(255,255,255,0.03); border-radius:14px; padding:1rem; display:flex; flex-direction:column; align-items:center; gap:0.5rem; cursor:pointer; border:1px solid rgba(255,255,255,0.04) }
-.mood-card .mood-art { font-size:2.4rem }
-.mood-card .mood-name { font-weight:600 }
-.mood-card.mood-selected { background: linear-gradient(135deg,var(--purple),var(--magenta)); color:#fff; border-color:transparent; transform:translateY(-4px); }
 .mood-art { font-size:2rem }
 
 .habits-list, .habits-list > * {
@@ -149,6 +169,10 @@ function toggleHabitDonePersist(habit) {
 .dashboard {
   box-sizing: border-box;
   overflow-x: hidden;
+}
+
+h2.greeting{
+    margin: 0;
 }
 
 @media (max-width: 1023px) {
