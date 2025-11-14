@@ -157,8 +157,6 @@ function toggleHabitDonePersist(habit) {
   gap: 1.5rem;
 }
 .habits-list { display:flex; flex-direction:column; gap:1rem }
-.mood-art { font-size:2rem }
-
 .habits-list, .habits-list > * {
   min-width: 0;
   width: 100%;

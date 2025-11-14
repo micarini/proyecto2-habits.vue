@@ -323,8 +323,6 @@ async function goToMoodTracker() {
   width: 100%;
 }
 
-.home-greeting { margin-bottom: 0.25rem; }
-
 .habits-title { margin-top: 1rem; }
 .habits-list { display:flex; flex-direction:column; gap:1rem; margin-bottom:4rem }
 

@@ -43,7 +43,7 @@ const props = defineProps({
   // keys (habitCompletions / moodEntries) when the corresponding props are  empty. Set to false to force the calendar to render only what props contain.
   allowLocalFallback: { type: Boolean, default: true }
 })
-const emit = defineEmits(['select-date'])
+const emit = defineEmits(['select-date']) 
 
 const weekdays = ['SU','MO','TU','WE','TH','FR','SA']
 

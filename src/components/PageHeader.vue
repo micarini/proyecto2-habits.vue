@@ -1,8 +1,10 @@
 <template>
   <div class="page-header">
-    <button v-if="showBack" class="icon-btn" @click="$emit('back')" aria-label="Back"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
+    <div class="header-side">
+      <button v-if="showBack" class="icon-btn" @click="$emit('back')" aria-label="Back"><i class="fa fa-angle-left" aria-hidden="true"></i></button>
+    </div>
     <h2 class="date-title">{{ title }}</h2>
-    <div style="width:48px"></div>
+    <div class="header-side" aria-hidden="true"></div>
   </div>
 </template>
 
@@ -12,5 +14,6 @@ const props = defineProps({ title: { type: String, default: '' }, showBack: { ty
 
 <style scoped>
 .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem }
-.date-title { color:var(--text); font-weight:700 }
+.header-side { width:48px; display:flex; align-items:center; justify-content:center }
+.date-title { color:var(--text); font-weight:700; margin:0 }
 </style>
